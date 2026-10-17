@@ -25,12 +25,12 @@ export class AuthService {
   private readonly baseUrl = inject(API_BASE_URL);
 
   // Signals
+  readonly token = signal<string | null>(this.getInitialToken());
   readonly currentUser = signal<UserDto | null>(this.getInitialUser());
   readonly isLoading = signal<boolean>(false);
 
-  readonly isAuthenticated = computed(() => {
-    return !!localStorage.getItem("hms_token");
-  });
+  // Authenticated state is strictly tied to the reactive token signal
+  readonly isAuthenticated = computed(() => !!this.token());
 
   readonly userRoleName = computed(() => {
     const user = this.currentUser();
@@ -66,6 +66,14 @@ export class AuthService {
     this.refreshCurrentUser();
   }
 
+  private getInitialToken(): string | null {
+    try {
+      return localStorage.getItem("hms_token");
+    } catch {
+      return null;
+    }
+  }
+
   private getInitialUser(): UserDto | null {
     try {
       const stored = localStorage.getItem("hms_user");
@@ -75,13 +83,19 @@ export class AuthService {
     }
   }
 
+  clearSession(): void {
+    console.log("[HMS AuthService] Clearing session state and tokens.");
+    localStorage.removeItem("hms_token");
+    localStorage.removeItem("hms_refresh_token");
+    localStorage.removeItem("hms_user");
+    this.token.set(null);
+    this.currentUser.set(null);
+  }
+
   refreshCurrentUser(): void {
-    const token = localStorage.getItem("hms_token");
-    if (!token) {
-      console.log(
-        "[HMS AuthService] No active session token found in localStorage.",
-      );
-      this.currentUser.set(null);
+    const currentToken = this.token();
+    if (!currentToken) {
+      console.log("[HMS AuthService] No active session token found in state.");
       return;
     }
 
@@ -105,9 +119,7 @@ export class AuthService {
           err?.message,
         );
         if (err?.status === 401) {
-          localStorage.removeItem("hms_token");
-          localStorage.removeItem("hms_user");
-          this.currentUser.set(null);
+          this.clearSession();
         }
       },
     });
@@ -132,6 +144,7 @@ export class AuthService {
             localStorage.setItem("hms_refresh_token", res.refreshToken);
           }
           localStorage.setItem("hms_user", JSON.stringify(res.user));
+          this.token.set(res.token);
           this.currentUser.set(res.user);
           this.isLoading.set(false);
           console.log(
@@ -213,9 +226,8 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem("hms_token");
-    localStorage.removeItem("hms_user");
-    this.currentUser.set(null);
+    console.log("[HMS AuthService] Logging out user.");
+    this.clearSession();
     this.router.navigate(["/login"]);
   }
 

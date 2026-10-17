@@ -6,10 +6,12 @@ import {
 import { inject } from "@angular/core";
 import { catchError, tap, throwError } from "rxjs";
 import { Router } from "@angular/router";
+import { AuthService } from "../services/auth.service";
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
-  const token = localStorage.getItem("hms_token");
+  const authService = inject(AuthService);
+  const token = authService.token() || localStorage.getItem("hms_token");
 
   let authReq = req;
   if (token) {
@@ -44,9 +46,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         console.warn(
           "[HMS HTTP] 401 Unauthorized encountered. Clearing session and redirecting to /login.",
         );
-        localStorage.removeItem("hms_token");
-        localStorage.removeItem("hms_user");
-        router.navigate(["/login"]);
+        authService.clearSession();
+        if (router.url !== "/login") {
+          router.navigate(["/login"]);
+        }
       }
       return throwError(() => error);
     }),

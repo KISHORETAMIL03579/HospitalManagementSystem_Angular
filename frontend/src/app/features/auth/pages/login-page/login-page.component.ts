@@ -21,9 +21,9 @@ export class LoginPageComponent implements OnInit {
   private router = inject(Router);
 
   ngOnInit(): void {
-    if (this.authService.isAuthenticated()) {
+    if (this.authService.isAuthenticated() && this.authService.currentUser()) {
       console.log(
-        "[HMS LoginPage] User already has an authenticated session, navigating to '/'",
+        "[HMS LoginPage] User already has a valid active session, navigating to '/'",
       );
       this.router.navigateByUrl("/");
     }

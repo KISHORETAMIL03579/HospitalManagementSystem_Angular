@@ -758,6 +758,13 @@ export class DashboardPageComponent implements OnInit {
   }
 
   loadData(): void {
+    if (!this.authService.isAuthenticated()) {
+      console.warn(
+        "[HMS Dashboard] Aborting data load: user is not authenticated.",
+      );
+      return;
+    }
+
     console.log("[HMS Dashboard] Loading dashboard metrics and data sets...");
     if (!this.isPatient()) {
       this.isPatientsLoading.set(true);
