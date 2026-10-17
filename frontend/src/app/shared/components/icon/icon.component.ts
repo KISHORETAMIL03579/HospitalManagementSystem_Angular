@@ -301,7 +301,7 @@ import { CommonModule } from "@angular/common";
         <line x1="2" y1="2" x2="22" y2="22" />
       </ng-container>
 
-      <!-- Mail / MailCheck -->
+      <!-- Mail / MailCheck / MailOpen -->
       <ng-container *ngSwitchCase="'mail'">
         <rect width="20" height="16" x="2" y="4" rx="2" />
         <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
@@ -310,6 +310,16 @@ import { CommonModule } from "@angular/common";
         <path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h9" />
         <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
         <path d="m16 19 2 2 4-4" />
+      </ng-container>
+      <ng-container *ngSwitchCase="'mail-open'">
+        <path
+          d="M21.2 8.4c.5.38.8.97.8 1.6v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10a2 2 0 0 1 .8-1.6l8-6a2 2 0 0 1 2.4 0l8 6Z"
+        />
+        <path d="m22 10-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 10" />
+      </ng-container>
+      <ng-container *ngSwitchCase="'check-check'">
+        <path d="M18 6 7 17l-5-5" />
+        <path d="m22 10-7.5 7.5L13 16" />
       </ng-container>
 
       <!-- Send -->
@@ -410,6 +420,18 @@ import { CommonModule } from "@angular/common";
       <ng-container *ngSwitchCase="'map-pin'">
         <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
         <circle cx="12" cy="10" r="3" />
+      </ng-container>
+
+      <!-- ClipboardList -->
+      <ng-container *ngSwitchCase="'clipboard-list'">
+        <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+        <path
+          d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+        />
+        <path d="M12 11h4" />
+        <path d="M12 16h4" />
+        <path d="M8 11h.01" />
+        <path d="M8 16h.01" />
       </ng-container>
 
       <!-- Default circle -->

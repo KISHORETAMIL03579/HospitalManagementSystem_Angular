@@ -1,4 +1,11 @@
-import { Injectable, signal, computed, effect } from "@angular/core";
+import {
+  Injectable,
+  signal,
+  computed,
+  effect,
+  inject,
+  NgZone,
+} from "@angular/core";
 import {
   formatLiveTime,
   formatDateByPattern,
@@ -8,6 +15,13 @@ import {
   applyDensityMode,
   updateStoredSettings,
   StoredPreferences,
+  getThemePreference,
+  getTimeFormatPreference,
+  getFontSizePreference,
+  getDensityPreference,
+  getTimeZonePreference,
+  getDateFormatPreference,
+  watchSystemTheme,
 } from "../utils/date-utils";
 
 export interface AppSettings {
@@ -89,20 +103,27 @@ export class SettingsService {
     return false;
   });
 
+  private ngZone = inject(NgZone);
+
   constructor() {
     this.loadFromStorage();
 
     if (this.isBrowser) {
-      // Clock timer
-      setInterval(() => {
-        this.currentTime.set(new Date());
-      }, 1000);
+      // Clock timer runs outside NgZone to avoid triggering full app change detection every second
+      this.ngZone.runOutsideAngular(() => {
+        setInterval(() => {
+          this.currentTime.set(new Date());
+        }, 1000);
+      });
 
       // Listen to cross-tab storage changes
       window.addEventListener("storage", () => this.loadFromStorage());
       window.addEventListener("careflow_settings_updated", () =>
         this.loadFromStorage(),
       );
+
+      // Listen to system theme updates
+      watchSystemTheme();
     }
 
     // Effect to apply classes to <html>
@@ -121,23 +142,12 @@ export class SettingsService {
     if (!this.isBrowser) return;
 
     try {
-      const th =
-        (localStorage.getItem("careflow_theme") as
-          "light" | "dark" | "system") || DEFAULT_SETTINGS.theme;
-      const fs =
-        (localStorage.getItem("careflow_fontSize") as
-          "small" | "medium" | "large") || DEFAULT_SETTINGS.fontSize;
-      const dn =
-        (localStorage.getItem("careflow_density") as
-          "compact" | "comfortable") || DEFAULT_SETTINGS.density;
-      const tf =
-        (localStorage.getItem("careflow_timeFormat") as "12" | "24") ||
-        DEFAULT_SETTINGS.timeFormat;
-      const tz =
-        localStorage.getItem("careflow_timeZone") || DEFAULT_SETTINGS.timeZone;
-      const df =
-        localStorage.getItem("careflow_dateFormat") ||
-        DEFAULT_SETTINGS.dateFormat;
+      const th = getThemePreference();
+      const fs = getFontSizePreference();
+      const dn = getDensityPreference();
+      const tf = getTimeFormatPreference();
+      const tz = getTimeZonePreference();
+      const df = getDateFormatPreference();
       const ln =
         localStorage.getItem("careflow_language") || DEFAULT_SETTINGS.language;
 

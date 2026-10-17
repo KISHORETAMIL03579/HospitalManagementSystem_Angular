@@ -17,6 +17,7 @@ import { StatusBadgeComponent } from "@shared/components/status-badge/status-bad
 import { EmptyStateComponent } from "@shared/components/empty-state/empty-state.component";
 import { IconComponent } from "@shared/components/icon/icon.component";
 import { BookingModalComponent } from "@features/appointments/components/booking-modal/booking-modal.component";
+import { AppointmentCalendarViewComponent } from "@features/appointments/components/appointment-calendar-view/appointment-calendar-view.component";
 
 type SortField = "appointmentDate" | "patientName" | "doctorName" | "status";
 type SortOrder = "asc" | "desc";
@@ -32,6 +33,7 @@ type SortOrder = "asc" | "desc";
     EmptyStateComponent,
     IconComponent,
     BookingModalComponent,
+    AppointmentCalendarViewComponent,
   ],
   template: `
     <div class="space-y-6">
@@ -44,11 +46,43 @@ type SortOrder = "asc" | "desc";
         "
         iconName="calendar"
       >
-        <div actions>
+        <div actions class="flex items-center gap-2.5">
+          <!-- View Switcher (Table vs Calendar) -->
+          <div
+            class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 gap-1"
+          >
+            <button
+              type="button"
+              (click)="viewMode.set('table')"
+              [class]="
+                'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ' +
+                (viewMode() === 'table'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white')
+              "
+            >
+              <app-icon name="activity" [size]="14"></app-icon>
+              <span>Table</span>
+            </button>
+            <button
+              type="button"
+              (click)="viewMode.set('calendar')"
+              [class]="
+                'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ' +
+                (viewMode() === 'calendar'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white')
+              "
+            >
+              <app-icon name="calendar" [size]="14"></app-icon>
+              <span>Calendar</span>
+            </button>
+          </div>
+
           <button
             type="button"
             (click)="openBookingModal()"
-            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm shadow-sm flex items-center gap-2 transition-all cursor-pointer"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-sm shadow-sm flex items-center gap-2 transition-all cursor-pointer"
           >
             <app-icon name="plus" [size]="16"></app-icon>
             <span>Book Appointment</span>
@@ -117,8 +151,18 @@ type SortOrder = "asc" | "desc";
         </div>
       </div>
 
+      <!-- Calendar View Section -->
+      <app-appointment-calendar-view
+        *ngIf="viewMode() === 'calendar'"
+        [appointments]="filteredAppointments()"
+        [doctors]="doctors()"
+        (selectAppointment)="selectedAppointment.set($event)"
+        (bookAppointment)="openBookingModal()"
+      ></app-appointment-calendar-view>
+
       <!-- Table Section -->
       <div
+        *ngIf="viewMode() === 'table'"
         class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden"
       >
         <div class="overflow-x-auto">
@@ -473,6 +517,8 @@ export class AppointmentListPageComponent implements OnInit {
   readonly isPatient = this.authService.isPatient;
   readonly AppointmentStatus = AppointmentStatus;
 
+  readonly viewMode = signal<"table" | "calendar">("table");
+
   selectedDoctorId?: number;
   selectedDate = "";
   selectedStatusFilter = "ALL";
@@ -495,6 +541,9 @@ export class AppointmentListPageComponent implements OnInit {
     this.fetchAppointments();
 
     this.route.queryParams.subscribe((params) => {
+      if (params["view"] === "calendar") {
+        this.viewMode.set("calendar");
+      }
       const aptId = params["appointmentId"];
       if (aptId) {
         const match = this.allAppointments().find(

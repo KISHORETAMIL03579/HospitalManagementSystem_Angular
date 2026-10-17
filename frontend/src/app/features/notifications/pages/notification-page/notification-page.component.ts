@@ -47,7 +47,7 @@ import { IconComponent } from "@shared/components/icon/icon.component";
         class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between"
       >
         <div
-          class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold overflow-x-auto"
+          class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold overflow-x-auto gap-1"
         >
           <button
             type="button"
@@ -65,13 +65,29 @@ import { IconComponent } from "@shared/components/icon/icon.component";
             type="button"
             (click)="activeTab.set('unread')"
             [class]="
-              'px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer ' +
+              'px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ' +
               (activeTab() === 'unread'
-                ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-xs'
+                ? 'bg-blue-600 text-white shadow-xs font-bold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400')
+            "
+          >
+            <span
+              class="w-2 h-2 rounded-full bg-blue-400"
+              *ngIf="unreadCount() > 0"
+            ></span>
+            <span>Unread ({{ unreadCount() }})</span>
+          </button>
+          <button
+            type="button"
+            (click)="activeTab.set('read')"
+            [class]="
+              'px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer ' +
+              (activeTab() === 'read'
+                ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-xs font-bold'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-white')
             "
           >
-            Unread ({{ unreadCount() }})
+            Read ({{ readCount() }})
           </button>
           <button
             type="button"
@@ -79,7 +95,7 @@ import { IconComponent } from "@shared/components/icon/icon.component";
             [class]="
               'px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer ' +
               (activeTab() === 'urgent'
-                ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-xs'
+                ? 'bg-white dark:bg-slate-900 text-rose-600 shadow-xs font-bold'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-white')
             "
           >
@@ -134,39 +150,73 @@ import { IconComponent } from "@shared/components/icon/icon.component";
           *ngFor="let item of displayedNotifications()"
           (click)="onNotificationClick(item)"
           [class]="
-            'p-4 transition-colors flex items-start gap-4 cursor-pointer ' +
+            'p-4 transition-all flex items-start gap-3.5 sm:gap-4 cursor-pointer ' +
             (!item.isRead
-              ? 'bg-blue-50/40 dark:bg-blue-950/20'
-              : 'hover:bg-slate-50 dark:hover:bg-slate-800/50')
+              ? 'border-l-4 border-l-blue-600 bg-blue-50/70 dark:bg-blue-950/35 hover:bg-blue-50/90 dark:hover:bg-blue-950/50'
+              : 'border-l-4 border-l-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50 opacity-80 hover:opacity-100')
           "
         >
-          <!-- Category Icon -->
-          <div
-            [class]="
-              'p-2.5 rounded-xl shrink-0 mt-0.5 ' +
-              getCategoryColor(item.category)
-            "
-          >
-            <app-icon
-              [name]="getCategoryIcon(item.category)"
-              [size]="18"
-            ></app-icon>
+          <!-- Category Icon with Unread Indicator -->
+          <div class="relative shrink-0 mt-0.5">
+            <div
+              [class]="'p-2.5 rounded-xl ' + getCategoryColor(item.category)"
+            >
+              <app-icon
+                [name]="getCategoryIcon(item.category)"
+                [size]="18"
+              ></app-icon>
+            </div>
+            <!-- Glowing Blue Dot for Unread -->
+            <span
+              *ngIf="!item.isRead"
+              class="absolute -top-1 -right-1 flex h-3 w-3"
+            >
+              <span
+                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"
+              ></span>
+              <span
+                class="relative inline-flex rounded-full h-3 w-3 bg-blue-600 border-2 border-white dark:border-slate-900"
+              ></span>
+            </span>
           </div>
 
           <!-- Content -->
-          <div class="flex-1 min-w-0 space-y-1">
+          <div class="flex-1 min-w-0 space-y-1.5">
             <div class="flex items-center justify-between gap-2 flex-wrap">
-              <div class="flex items-center gap-2 min-w-0">
+              <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                <!-- Status Badge (UNREAD vs READ) -->
+                <span
+                  *ngIf="!item.isRead"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-600 text-white shadow-2xs tracking-wider shrink-0"
+                >
+                  <span
+                    class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"
+                  ></span>
+                  UNREAD
+                </span>
+                <span
+                  *ngIf="item.isRead"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 shrink-0"
+                >
+                  <app-icon
+                    name="check-check"
+                    [size]="12"
+                    className="text-emerald-500"
+                  ></app-icon>
+                  READ
+                </span>
+
                 <h4
                   [class]="
                     'text-sm truncate ' +
                     (!item.isRead
-                      ? 'font-bold text-slate-900 dark:text-white'
+                      ? 'font-bold text-slate-950 dark:text-white'
                       : 'font-semibold text-slate-700 dark:text-slate-300')
                   "
                 >
                   {{ item.title }}
                 </h4>
+
                 <span
                   [class]="
                     'px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ' +
@@ -181,13 +231,21 @@ import { IconComponent } from "@shared/components/icon/icon.component";
                   {{ item.category }}
                 </span>
               </div>
-              <span class="text-xs text-slate-400 whitespace-nowrap">
+
+              <span
+                class="text-xs text-slate-400 font-medium whitespace-nowrap"
+              >
                 {{ formatTimeAgo(item.createdAt) }}
               </span>
             </div>
 
             <p
-              class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed"
+              [class]="
+                'text-xs leading-relaxed ' +
+                (!item.isRead
+                  ? 'text-slate-800 dark:text-slate-200 font-medium'
+                  : 'text-slate-600 dark:text-slate-400')
+              "
             >
               {{ item.message }}
             </p>
@@ -195,45 +253,60 @@ import { IconComponent } from "@shared/components/icon/icon.component";
 
           <!-- Actions -->
           <div
-            class="flex items-center gap-1 shrink-0 self-center"
+            class="flex items-center gap-1.5 shrink-0 self-center"
             (click)="$event.stopPropagation()"
           >
+            <!-- Professional Toggle Read / Unread Button -->
             <button
+              *ngIf="!item.isRead"
               type="button"
               (click)="toggleRead(item)"
-              [title]="item.isRead ? 'Mark as Unread' : 'Mark as Read'"
-              class="p-2 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              title="Mark as Read"
+              class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-900/60 dark:hover:bg-blue-800 dark:text-blue-200 transition cursor-pointer border border-blue-200 dark:border-blue-700/60 shadow-2xs"
             >
-              <app-icon
-                [name]="item.isRead ? 'clock' : 'check'"
-                [size]="14"
-              ></app-icon>
+              <app-icon name="mail-open" [size]="14"></app-icon>
+              <span class="hidden sm:inline">Mark Read</span>
             </button>
+
+            <button
+              *ngIf="item.isRead"
+              type="button"
+              (click)="toggleRead(item)"
+              title="Mark as Unread"
+              class="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 transition cursor-pointer border border-slate-200 dark:border-slate-700"
+            >
+              <app-icon name="mail" [size]="14"></app-icon>
+              <span class="hidden sm:inline">Mark Unread</span>
+            </button>
+
+            <!-- Archive Button -->
             <button
               *ngIf="!item.isArchived"
               type="button"
               (click)="archive(item.id)"
-              title="Archive"
-              class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              title="Archive Notification"
+              class="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
             >
-              <app-icon name="download" [size]="14"></app-icon>
+              <app-icon name="download" [size]="15"></app-icon>
             </button>
             <button
               *ngIf="item.isArchived"
               type="button"
               (click)="unarchive(item.id)"
               title="Unarchive"
-              class="p-2 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              class="p-2 text-slate-400 hover:text-indigo-600 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition"
             >
-              <app-icon name="upload" [size]="14"></app-icon>
+              <app-icon name="upload" [size]="15"></app-icon>
             </button>
+
+            <!-- Delete Button -->
             <button
               type="button"
               (click)="delete(item.id)"
-              title="Delete"
-              class="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              title="Delete Notification"
+              class="p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer transition"
             >
-              <app-icon name="trash-2" [size]="14"></app-icon>
+              <app-icon name="trash-2" [size]="15"></app-icon>
             </button>
           </div>
         </div>
@@ -250,7 +323,13 @@ export class NotificationPageComponent {
   readonly unreadCount = this.notificationService.unreadCount;
   readonly urgentCount = this.notificationService.urgentCount;
 
-  readonly activeTab = signal<"all" | "unread" | "urgent" | "archived">("all");
+  readonly readCount = computed(
+    () => this.activeList().filter((n) => n.isRead).length,
+  );
+
+  readonly activeTab = signal<
+    "all" | "unread" | "read" | "urgent" | "archived"
+  >("all");
   searchQuery = "";
 
   readonly displayedNotifications = computed(() => {
@@ -262,6 +341,8 @@ export class NotificationPageComponent {
       list = this.archivedList();
     } else if (tab === "unread") {
       list = this.activeList().filter((n) => !n.isRead);
+    } else if (tab === "read") {
+      list = this.activeList().filter((n) => n.isRead);
     } else if (tab === "urgent") {
       list = this.activeList().filter((n) => n.priority === "Urgent");
     } else {

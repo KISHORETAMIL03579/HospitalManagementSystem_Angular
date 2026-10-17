@@ -40,6 +40,19 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "Appointments",
     path: "/appointments",
+    icon: "clipboard-list",
+    roles: [
+      "admin",
+      "hospitalmanager",
+      "doctor",
+      "nurse",
+      "receptionist",
+      "patient",
+    ],
+  },
+  {
+    label: "Calendar",
+    path: "/calendar",
     icon: "calendar",
     roles: [
       "admin",
@@ -127,6 +140,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/patients": "Patients",
   "/patients/new": "Register Patient",
   "/appointments": "Appointments",
+  "/calendar": "Calendar",
   "/doctors": "Doctors",
   "/admin": "Admin Dashboard",
   "/admin/staff-approvals": "Staff Approvals",

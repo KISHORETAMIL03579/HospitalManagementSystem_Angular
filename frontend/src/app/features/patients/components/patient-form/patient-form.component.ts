@@ -81,7 +81,10 @@ import { PhoneNumberInputComponent } from "@shared/components/phone-input/phone-
               <label
                 class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
               >
-                First Name *
+                First Name
+                <span class="text-rose-500 font-bold ml-0.5" aria-hidden="true"
+                  >*</span
+                >
               </label>
               <input
                 type="text"
@@ -97,7 +100,10 @@ import { PhoneNumberInputComponent } from "@shared/components/phone-input/phone-
               <label
                 class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
               >
-                Last Name *
+                Last Name
+                <span class="text-rose-500 font-bold ml-0.5" aria-hidden="true"
+                  >*</span
+                >
               </label>
               <input
                 type="text"
@@ -113,7 +119,10 @@ import { PhoneNumberInputComponent } from "@shared/components/phone-input/phone-
               <label
                 class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
               >
-                Date of Birth *
+                Date of Birth
+                <span class="text-rose-500 font-bold ml-0.5" aria-hidden="true"
+                  >*</span
+                >
               </label>
               <input
                 type="date"
@@ -128,7 +137,10 @@ import { PhoneNumberInputComponent } from "@shared/components/phone-input/phone-
               <label
                 class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
               >
-                Gender *
+                Gender
+                <span class="text-rose-500 font-bold ml-0.5" aria-hidden="true"
+                  >*</span
+                >
               </label>
               <select
                 [(ngModel)]="formData.gender"

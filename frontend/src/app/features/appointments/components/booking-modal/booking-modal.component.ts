@@ -95,7 +95,10 @@ import { formatCurrency } from "@core/utils/format-utils";
             <label
               class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
             >
-              Patient *
+              Patient
+              <span class="text-rose-500 font-bold ml-0.5" aria-hidden="true"
+                >*</span
+              >
             </label>
             <select
               required
@@ -115,7 +118,10 @@ import { formatCurrency } from "@core/utils/format-utils";
             <label
               class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
             >
-              Consulting Doctor *
+              Consulting Doctor
+              <span class="text-rose-500 font-bold ml-0.5" aria-hidden="true"
+                >*</span
+              >
             </label>
             <select
               required
@@ -139,7 +145,10 @@ import { formatCurrency } from "@core/utils/format-utils";
               <label
                 class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
               >
-                Appointment Date *
+                Appointment Date
+                <span class="text-rose-500 font-bold ml-0.5" aria-hidden="true"
+                  >*</span
+                >
               </label>
               <input
                 type="date"
@@ -156,7 +165,10 @@ import { formatCurrency } from "@core/utils/format-utils";
               <label
                 class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
               >
-                Time Slot *
+                Time Slot
+                <span class="text-rose-500 font-bold ml-0.5" aria-hidden="true"
+                  >*</span
+                >
               </label>
               <div *ngIf="isLoadingSlots()" class="text-xs text-slate-400 py-2">
                 Checking availability...

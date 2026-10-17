@@ -1,13 +1,128 @@
+import { DateTime } from "luxon";
+
 const isBrowser =
   typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 
-function getStoredPreference(key: string, fallback: string): string {
+export type ThemeMode = "light" | "dark" | "system";
+export type FontSize = "small" | "medium" | "large";
+export type DensityMode = "compact" | "comfortable";
+export type TimeFormat = "12" | "24";
+
+export interface TimezoneOption {
+  id: string; // e.g. "Asia/Kolkata"
+  label: string; // e.g. "(UTC+05:30) Asia/Kolkata"
+  offset: string; // "+05:30"
+  offsetMinutes: number;
+  region: string; // "Asia"
+}
+
+export interface DateFormatOption {
+  pattern: string;
+  label: string;
+  preview: string;
+  category: string;
+}
+
+export interface StoredPreferences {
+  theme?: ThemeMode;
+  fontSize?: FontSize;
+  density?: DensityMode;
+  timeFormat?: TimeFormat;
+  timeZone?: string;
+  dateFormat?: string;
+  language?: string;
+  firstDay?: "monday" | "sunday";
+}
+
+// ----------------------------------------------------
+// Validation & Preference Helpers
+// ----------------------------------------------------
+
+export function getStoredPreference(key: string, fallback: string): string {
   if (!isBrowser) return fallback;
   try {
     return localStorage.getItem(key) || fallback;
   } catch {
     return fallback;
   }
+}
+
+export function getThemePreference(): ThemeMode {
+  const val = getStoredPreference("careflow_theme", "light");
+  return val === "light" || val === "dark" || val === "system" ? val : "light";
+}
+
+export function getTimeFormatPreference(): TimeFormat {
+  const val = getStoredPreference("careflow_timeFormat", "12");
+  return val === "12" || val === "24" ? val : "12";
+}
+
+export function getFontSizePreference(): FontSize {
+  const val = getStoredPreference("careflow_fontSize", "medium");
+  return val === "small" || val === "medium" || val === "large"
+    ? val
+    : "medium";
+}
+
+export function getDensityPreference(): DensityMode {
+  const val = getStoredPreference("careflow_density", "comfortable");
+  return val === "compact" || val === "comfortable" ? val : "comfortable";
+}
+
+export function getTimeZonePreference(): string {
+  const val = getStoredPreference("careflow_timeZone", "Asia/Kolkata");
+  try {
+    if (DateTime.now().setZone(val).isValid) {
+      return val;
+    }
+  } catch {
+    // fallback
+  }
+  return "Asia/Kolkata";
+}
+
+export function getDateFormatPreference(): string {
+  const val = getStoredPreference("careflow_dateFormat", "dd/MM/yyyy");
+  return normalizeFormatPattern(val);
+}
+
+export function normalizeFormatPattern(pattern?: string): string {
+  if (!pattern) return "dd/MM/yyyy";
+  const mapped = pattern
+    .replace(/YYYY/g, "yyyy")
+    .replace(/YY/g, "yy")
+    .replace(/DD/g, "dd")
+    .replace(/\bD\b/g, "d");
+
+  // Verify pattern is valid for Luxon
+  try {
+    const test = DateTime.now().toFormat(mapped);
+    if (test && !test.includes("Invalid")) {
+      return mapped;
+    }
+  } catch {
+    // fallback
+  }
+  return "dd/MM/yyyy";
+}
+
+// ----------------------------------------------------
+// Dedicated Time Parsing & Formatting
+// ----------------------------------------------------
+
+export function parseTimeString(
+  value: string,
+): { hours: number; minutes: number } | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  // Accepts HH:mm or HH:mm:ss (00:00 to 23:59)
+  const match = /^([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/.exec(trimmed);
+  if (!match) return null;
+
+  return {
+    hours: Number(match[1]),
+    minutes: Number(match[2]),
+  };
 }
 
 export function formatTimeSlot(
@@ -17,137 +132,106 @@ export function formatTimeSlot(
 ): string {
   if (!timeStr) return "";
 
-  const timeFormat =
-    formatPref || getStoredPreference("careflow_timeFormat", "12");
-  const timeZone =
-    timeZonePref || getStoredPreference("careflow_timeZone", "Asia/Kolkata");
-  const is24 = timeFormat === "24" || timeFormat === "Hour24";
+  const timeFormat = formatPref || getTimeFormatPreference();
+  const timeZone = timeZonePref || getTimeZonePreference();
+  const is24 = timeFormat === "24";
+  const targetPattern = is24 ? "HH:mm" : "hh:mm a";
 
+  // Case A: Full ISO DateTime string e.g. "2026-10-17T14:30:00Z"
   if (timeStr.includes("T")) {
-    const d = new Date(timeStr);
-    if (!isNaN(d.getTime())) {
-      try {
-        const formatter = new Intl.DateTimeFormat("en-US", {
-          timeZone,
-          hour: is24 ? "2-digit" : "2-digit",
-          minute: "2-digit",
-          hour12: !is24,
-        });
-        return formatter.format(d);
-      } catch {
-        const hours = d.getHours();
-        const minutes = d.getMinutes().toString().padStart(2, "0");
-        if (is24) {
-          return `${hours.toString().padStart(2, "0")}:${minutes}`;
+    try {
+      let dt = DateTime.fromISO(timeStr, { zone: timeZone });
+      if (!dt.isValid) {
+        const jsDate = new Date(timeStr);
+        if (!isNaN(jsDate.getTime())) {
+          dt = DateTime.fromJSDate(jsDate, { zone: timeZone });
         }
-        const period = hours >= 12 ? "PM" : "AM";
-        const h12 = hours % 12 || 12;
-        return `${h12.toString().padStart(2, "0")}:${minutes} ${period}`;
       }
+      if (dt.isValid) {
+        return dt.toFormat(targetPattern);
+      }
+    } catch {
+      // fallback
     }
+    return "";
   }
 
-  const parts = timeStr.split(":");
-  const hours = parseInt(parts[0], 10) || 0;
-  const minutes = parseInt(parts[1], 10) || 0;
-  const mm = minutes.toString().padStart(2, "0");
+  // Case B: Time-only string e.g. "09:30", "14:45"
+  const parsed = parseTimeString(timeStr);
+  if (!parsed) {
+    // Reject invalid inputs like "abc:30" or "25:90"
+    return "";
+  }
 
-  if (is24) {
-    const hh = hours.toString().padStart(2, "0");
-    return `${hh}:${mm}`;
-  } else {
-    const period = hours >= 12 ? "PM" : "AM";
-    const h12 = hours % 12 || 12;
-    const hh = h12.toString().padStart(2, "0");
-    return `${hh}:${mm} ${period}`;
+  try {
+    const dt = DateTime.now().setZone(timeZone).set({
+      hour: parsed.hours,
+      minute: parsed.minutes,
+      second: 0,
+      millisecond: 0,
+    });
+
+    return dt.isValid ? dt.toFormat(targetPattern) : "";
+  } catch {
+    return "";
   }
 }
 
+// ----------------------------------------------------
+// Date Parsing & Formatting
+// ----------------------------------------------------
+
 export function formatDateByPattern(
-  dateVal: string | Date,
+  dateVal: string | Date | null | undefined,
   formatPref?: string,
   timeZonePref?: string,
 ): string {
   if (!dateVal) return "";
-  const d = typeof dateVal === "string" ? new Date(dateVal) : dateVal;
-  if (isNaN(d.getTime())) return "";
 
-  const pattern =
-    formatPref || getStoredPreference("careflow_dateFormat", "DD/MM/YYYY");
-  const timeZone =
-    timeZonePref || getStoredPreference("careflow_timeZone", "Asia/Kolkata");
-
-  let year = "";
-  let monthNum = "";
-  let day = "";
-  let hourStr = "";
-  let minuteStr = "";
-  let monthShort = "";
+  const pattern = normalizeFormatPattern(
+    formatPref || getDateFormatPreference(),
+  );
+  const timeZone = timeZonePref || getTimeZonePreference();
 
   try {
-    const parts = new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).formatToParts(d);
+    let dt: DateTime;
 
-    for (const p of parts) {
-      if (p.type === "year") year = p.value;
-      else if (p.type === "month") monthNum = p.value;
-      else if (p.type === "day") day = p.value;
-      else if (p.type === "hour") hourStr = p.value;
-      else if (p.type === "minute") minuteStr = p.value;
+    if (typeof dateVal === "string") {
+      const trimmed = dateVal.trim();
+
+      // Date-only string e.g. "2026-10-17": parse directly to prevent timezone day-shift
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        dt = DateTime.fromISO(trimmed);
+      } else {
+        // Full ISO timestamp with time/zone
+        dt = DateTime.fromISO(trimmed, { zone: timeZone });
+        if (!dt.isValid) {
+          const jsDate = new Date(trimmed);
+          if (!isNaN(jsDate.getTime())) {
+            dt = DateTime.fromJSDate(jsDate, { zone: timeZone });
+          }
+        }
+      }
+    } else if (dateVal instanceof Date) {
+      if (isNaN(dateVal.getTime())) return "";
+      dt = DateTime.fromJSDate(dateVal, { zone: timeZone });
+    } else {
+      return "";
     }
 
-    monthShort = new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      month: "short",
-    }).format(d);
+    if (dt && dt.isValid) {
+      return dt.toFormat(pattern);
+    }
   } catch {
-    const monthsShort = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    year = d.getFullYear().toString();
-    monthNum = (d.getMonth() + 1).toString().padStart(2, "0");
-    day = d.getDate().toString().padStart(2, "0");
-    hourStr = d.getHours().toString().padStart(2, "0");
-    minuteStr = d.getMinutes().toString().padStart(2, "0");
-    monthShort = monthsShort[d.getMonth()];
+    // fallback
   }
 
-  if (pattern === "hh:mm a" || pattern === "HH:mm" || pattern === "hh:mm") {
-    const hNum = parseInt(hourStr, 10) || 0;
-    if (pattern === "HH:mm") {
-      return `${hourStr.padStart(2, "0")}:${minuteStr.padStart(2, "0")}`;
-    }
-    const period = hNum >= 12 ? "PM" : "AM";
-    const h12 = hNum % 12 || 12;
-    return `${h12.toString().padStart(2, "0")}:${minuteStr.padStart(2, "0")} ${period}`;
-  }
-
-  if (pattern === "MMM dd, yyyy") {
-    return `${monthShort} ${day}, ${year}`;
-  } else if (pattern === "MM/DD/YYYY") {
-    return `${monthNum}/${day}/${year}`;
-  } else if (pattern === "YYYY-MM-DD") {
-    return `${year}-${monthNum}-${day}`;
-  } else {
-    return `${day}/${monthNum}/${year}`;
+  try {
+    const d =
+      typeof dateVal === "string" ? new Date(dateVal) : (dateVal as Date);
+    return isNaN(d.getTime()) ? "" : d.toLocaleDateString();
+  } catch {
+    return "";
   }
 }
 
@@ -156,11 +240,21 @@ export function formatLiveTime(
   timeFormatPref?: string,
   timeZonePref?: string,
 ): string {
-  const timeFormat =
-    timeFormatPref || getStoredPreference("careflow_timeFormat", "12");
-  const timeZone =
-    timeZonePref || getStoredPreference("careflow_timeZone", "Asia/Kolkata");
-  const is24 = timeFormat === "24" || timeFormat === "Hour24";
+  if (!dateVal || isNaN(dateVal.getTime())) return "";
+
+  const timeFormat = timeFormatPref || getTimeFormatPreference();
+  const timeZone = timeZonePref || getTimeZonePreference();
+  const is24 = timeFormat === "24";
+  const targetPattern = is24 ? "HH:mm:ss" : "hh:mm:ss a";
+
+  try {
+    const dt = DateTime.fromJSDate(dateVal, { zone: timeZone });
+    if (dt.isValid) {
+      return dt.toFormat(targetPattern);
+    }
+  } catch {
+    // fallback
+  }
 
   try {
     return dateVal.toLocaleTimeString([], {
@@ -171,22 +265,248 @@ export function formatLiveTime(
       hour12: !is24,
     });
   } catch {
-    return dateVal.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: !is24,
-    });
+    return "";
   }
 }
 
-export function notifySettingsChanged(): void {
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event("careflow_settings_updated"));
-  }
+// ----------------------------------------------------
+// Timezone and Regional List
+// ----------------------------------------------------
+
+interface IntlWithSupportedValues {
+  supportedValuesOf?: (key: string) => string[];
 }
 
-export function applyThemeMode(theme: "light" | "dark" | "system"): void {
+export function getAllAvailableTimezones(): TimezoneOption[] {
+  let tzList: string[] = [];
+  try {
+    const intlTyped = Intl as unknown as IntlWithSupportedValues;
+    if (typeof intlTyped.supportedValuesOf === "function") {
+      tzList = intlTyped.supportedValuesOf("timeZone") || [];
+    }
+  } catch (e) {
+    console.warn("Intl.supportedValuesOf('timeZone') not supported:", e);
+  }
+
+  if (!tzList || tzList.length === 0) {
+    tzList = [
+      "UTC",
+      "Africa/Cairo",
+      "Africa/Johannesburg",
+      "Africa/Lagos",
+      "Africa/Nairobi",
+      "America/Anchorage",
+      "America/Argentina/Buenos_Aires",
+      "America/Bogota",
+      "America/Chicago",
+      "America/Denver",
+      "America/Halifax",
+      "America/Los_Angeles",
+      "America/Mexico_City",
+      "America/New_York",
+      "America/Phoenix",
+      "America/Santiago",
+      "America/Sao_Paulo",
+      "America/Toronto",
+      "America/Vancouver",
+      "Asia/Bangkok",
+      "Asia/Colombo",
+      "Asia/Dhaka",
+      "Asia/Dubai",
+      "Asia/Hong_Kong",
+      "Asia/Jakarta",
+      "Asia/Jerusalem",
+      "Asia/Karachi",
+      "Asia/Kolkata",
+      "Asia/Kuala_Lumpur",
+      "Asia/Manila",
+      "Asia/Qatar",
+      "Asia/Riyadh",
+      "Asia/Seoul",
+      "Asia/Shanghai",
+      "Asia/Singapore",
+      "Asia/Taipei",
+      "Asia/Tokyo",
+      "Atlantic/Reykjavik",
+      "Australia/Adelaide",
+      "Australia/Brisbane",
+      "Australia/Melbourne",
+      "Australia/Perth",
+      "Australia/Sydney",
+      "Europe/Amsterdam",
+      "Europe/Athens",
+      "Europe/Berlin",
+      "Europe/Brussels",
+      "Europe/Dublin",
+      "Europe/Helsinki",
+      "Europe/Istanbul",
+      "Europe/Lisbon",
+      "Europe/London",
+      "Europe/Madrid",
+      "Europe/Moscow",
+      "Europe/Paris",
+      "Europe/Rome",
+      "Europe/Stockholm",
+      "Europe/Vienna",
+      "Europe/Warsaw",
+      "Europe/Zurich",
+      "Pacific/Auckland",
+      "Pacific/Fiji",
+      "Pacific/Honolulu",
+      "Pacific/Guam",
+    ];
+  }
+
+  if (!tzList.includes("UTC")) {
+    tzList.unshift("UTC");
+  }
+
+  const now = DateTime.now();
+
+  const options: TimezoneOption[] = tzList.map((tz) => {
+    let offsetStr = "+00:00";
+    let offsetMinutes = 0;
+    try {
+      const dt = now.setZone(tz);
+      if (dt.isValid) {
+        offsetStr = dt.toFormat("ZZ");
+        offsetMinutes = dt.offset;
+      }
+    } catch {
+      // fallback
+    }
+
+    const region = tz.includes("/") ? tz.split("/")[0] : "Global";
+
+    return {
+      id: tz,
+      label: `(UTC${offsetStr}) ${tz.replace(/_/g, " ")}`,
+      offset: offsetStr,
+      offsetMinutes,
+      region,
+    };
+  });
+
+  return options.sort((a, b) => {
+    if (a.offsetMinutes !== b.offsetMinutes) {
+      return a.offsetMinutes - b.offsetMinutes;
+    }
+    return a.id.localeCompare(b.id);
+  });
+}
+
+export function getStandardDateFormats(
+  timeZonePref?: string,
+): DateFormatOption[] {
+  const timeZone = timeZonePref || getTimeZonePreference();
+  let now = DateTime.now().setZone(timeZone);
+  if (!now.isValid) now = DateTime.now();
+
+  const formats = [
+    {
+      pattern: "dd/MM/yyyy",
+      label: "dd/MM/yyyy (UK, India, Australia, Europe)",
+      category: "Standard",
+    },
+    {
+      pattern: "MM/dd/yyyy",
+      label: "MM/dd/yyyy (US Standard)",
+      category: "Standard",
+    },
+    {
+      pattern: "yyyy-MM-dd",
+      label: "yyyy-MM-dd (ISO 8601 International)",
+      category: "ISO Standard",
+    },
+    {
+      pattern: "dd-MM-yyyy",
+      label: "dd-MM-yyyy (Hyphenated Standard)",
+      category: "Standard",
+    },
+    {
+      pattern: "dd.MM.yyyy",
+      label: "dd.MM.yyyy (Continental Europe - Germany, CH)",
+      category: "European",
+    },
+    {
+      pattern: "yyyy/MM/dd",
+      label: "yyyy/MM/dd (East Asia - Japan, China, Canada)",
+      category: "Regional",
+    },
+    {
+      pattern: "dd MMM yyyy",
+      label: "dd MMM yyyy (Clinical & Healthcare Standard)",
+      category: "Clinical",
+    },
+    {
+      pattern: "dd MMMM yyyy",
+      label: "dd MMMM yyyy (Long Medical Record)",
+      category: "Clinical",
+    },
+    {
+      pattern: "MMMM dd, yyyy",
+      label: "MMMM dd, yyyy (US Long Form)",
+      category: "Descriptive",
+    },
+    {
+      pattern: "EEE, dd MMM yyyy",
+      label: "EEE, dd MMM yyyy (Clinical Appointment Schedule)",
+      category: "Clinical",
+    },
+    {
+      pattern: "EEEE, MMMM dd, yyyy",
+      label: "EEEE, MMMM dd, yyyy (Full Hospital Calendar)",
+      category: "Descriptive",
+    },
+  ];
+
+  return formats.map((f) => ({
+    pattern: f.pattern,
+    label: f.label,
+    preview: now.toFormat(f.pattern),
+    category: f.category,
+  }));
+}
+
+// ----------------------------------------------------
+// Theme & Display Settings
+// ----------------------------------------------------
+
+export function watchSystemTheme(): () => void {
+  if (!isBrowser) return () => {};
+
+  try {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const update = () => {
+      const savedTheme = getThemePreference();
+      if (savedTheme === "system") {
+        document.documentElement.classList.toggle("dark", media.matches);
+      }
+    };
+
+    if (media.addEventListener) {
+      media.addEventListener("change", update);
+      return () => media.removeEventListener("change", update);
+    } else if (
+      (media as unknown as { addListener?: (fn: () => void) => void })
+        .addListener
+    ) {
+      (
+        media as unknown as { addListener: (fn: () => void) => void }
+      ).addListener(update);
+      return () =>
+        (
+          media as unknown as { removeListener: (fn: () => void) => void }
+        ).removeListener(update);
+    }
+  } catch (err) {
+    console.warn("Failed to attach system theme listener:", err);
+  }
+  return () => {};
+}
+
+export function applyThemeMode(theme: ThemeMode): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
   if (theme === "dark") {
@@ -195,7 +515,7 @@ export function applyThemeMode(theme: "light" | "dark" | "system"): void {
     root.classList.remove("dark");
   } else {
     if (
-      typeof window !== "undefined" &&
+      isBrowser &&
       window.matchMedia &&
       window.matchMedia("(prefers-color-scheme: dark)").matches
     ) {
@@ -206,7 +526,7 @@ export function applyThemeMode(theme: "light" | "dark" | "system"): void {
   }
 }
 
-export function applyFontSize(size: "small" | "medium" | "large"): void {
+export function applyFontSize(size: FontSize): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
   if (size === "small") {
@@ -218,7 +538,7 @@ export function applyFontSize(size: "small" | "medium" | "large"): void {
   }
 }
 
-export function applyDensityMode(density: "compact" | "comfortable"): void {
+export function applyDensityMode(density: DensityMode): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
   if (density === "compact") {
@@ -228,15 +548,10 @@ export function applyDensityMode(density: "compact" | "comfortable"): void {
   }
 }
 
-export interface StoredPreferences {
-  theme?: "light" | "dark" | "system";
-  fontSize?: "small" | "medium" | "large";
-  density?: "compact" | "comfortable";
-  timeFormat?: "12" | "24";
-  timeZone?: string;
-  dateFormat?: string;
-  language?: string;
-  firstDay?: "monday" | "sunday";
+export function notifySettingsChanged(): void {
+  if (isBrowser) {
+    window.dispatchEvent(new Event("careflow_settings_updated"));
+  }
 }
 
 export function updateStoredSettings(settings: StoredPreferences): void {
@@ -263,19 +578,16 @@ export function initializeAppSettings(): void {
   if (!isBrowser || typeof document === "undefined") return;
 
   try {
-    const savedTheme =
-      (localStorage.getItem("careflow_theme") as "light" | "dark" | "system") ||
-      "light";
-    const savedFontSize =
-      (localStorage.getItem("careflow_fontSize") as
-        "small" | "medium" | "large") || "medium";
-    const savedDensity =
-      (localStorage.getItem("careflow_density") as "compact" | "comfortable") ||
-      "comfortable";
+    const savedTheme = getThemePreference();
+    const savedFontSize = getFontSizePreference();
+    const savedDensity = getDensityPreference();
 
     applyThemeMode(savedTheme);
     applyFontSize(savedFontSize);
     applyDensityMode(savedDensity);
+
+    // Watch OS dark/light mode changes when system theme is selected
+    watchSystemTheme();
   } catch (err) {
     console.error(
       "Failed to initialize CareFlow app settings on startup:",

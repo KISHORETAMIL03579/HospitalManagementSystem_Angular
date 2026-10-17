@@ -71,6 +71,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: "calendar",
+        loadComponent: () =>
+          import("./features/appointments/pages/appointment-calendar-page/appointment-calendar-page.component").then(
+            (m) => m.AppointmentCalendarPageComponent,
+          ),
+      },
+      {
         path: "admin",
         canActivate: [roleGuard],
         data: { roles: ADMIN_ROLES },

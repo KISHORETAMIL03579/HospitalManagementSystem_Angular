@@ -1,9 +1,15 @@
-import { Component, OnInit, inject, signal } from "@angular/core";
+import { Component, OnInit, inject, signal, computed } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { AuthService } from "@core/services/auth.service";
 import { SettingsService } from "@core/services/settings.service";
 import { formatRoleDisplay } from "@core/models/auth.models";
+import {
+  getAllAvailableTimezones,
+  getStandardDateFormats,
+  TimezoneOption,
+  DateFormatOption,
+} from "@core/utils/date-utils";
 import { PageHeaderComponent } from "@shared/components/page-header/page-header.component";
 import { PhoneNumberInputComponent } from "@shared/components/phone-input/phone-input.component";
 import { IconComponent } from "@shared/components/icon/icon.component";
@@ -356,72 +362,263 @@ type SettingsTab =
                 Date & Time Regional Settings
               </h3>
               <p class="text-xs text-slate-500 dark:text-slate-400">
-                Configure formatting standards across hospital dashboards.
+                Configure international timezone, calendar formatting, and
+                clinical clock standards.
               </p>
             </div>
 
-            <div class="space-y-4 text-xs">
+            <!-- Live Regional Preview Card -->
+            <div
+              class="p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800/80 border border-blue-200/60 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+            >
+              <div class="flex items-center gap-3">
+                <div
+                  class="p-2.5 rounded-xl bg-blue-600 text-white shadow-sm shrink-0"
+                >
+                  <app-icon name="clock" [size]="20"></app-icon>
+                </div>
+                <div>
+                  <div
+                    class="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider"
+                  >
+                    Hospital Clock Preview
+                  </div>
+                  <div
+                    class="text-lg font-bold text-slate-900 dark:text-white font-mono flex items-center gap-2"
+                  >
+                    <span>{{ formattedCurrentTime() }}</span>
+                    <span
+                      class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"
+                      title="Live clock sync"
+                    ></span>
+                  </div>
+                </div>
+              </div>
+              <div class="text-left sm:text-right">
+                <div
+                  class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+                >
+                  Active Clinical Date
+                </div>
+                <div
+                  class="text-sm font-semibold text-slate-800 dark:text-slate-200"
+                >
+                  {{ formattedCurrentDate() }}
+                </div>
+                <div
+                  class="text-[11px] font-mono text-slate-500 dark:text-slate-400"
+                >
+                  {{ settings().timeZone }}
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-5 text-xs">
+              <!-- Time Format Standard -->
               <div>
                 <label
-                  class="block font-semibold text-slate-700 dark:text-slate-300 mb-1"
-                  >Time Format</label
+                  class="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
+                  >Time Format Standard</label
                 >
-                <select
-                  [ngModel]="settings().timeFormat"
-                  (ngModelChange)="updateSetting('timeFormat', $event)"
-                  class="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer"
-                >
-                  <option value="12">12-Hour (e.g. 02:30 PM)</option>
-                  <option value="24">24-Hour (e.g. 14:30)</option>
-                </select>
+                <div class="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    (click)="updateSetting('timeFormat', '12')"
+                    [class]="
+                      'p-3.5 rounded-xl border text-left cursor-pointer transition ' +
+                      (settings().timeFormat === '12'
+                        ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-950/60 font-semibold text-blue-700 dark:text-blue-300 shadow-2xs'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800')
+                    "
+                  >
+                    <div class="font-bold flex items-center justify-between">
+                      <span>12-Hour Format</span>
+                      <app-icon
+                        *ngIf="settings().timeFormat === '12'"
+                        name="check"
+                        [size]="14"
+                        className="text-blue-600"
+                      ></app-icon>
+                    </div>
+                    <div
+                      class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5"
+                    >
+                      e.g. 04:30:15 PM (Standard AM/PM)
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    (click)="updateSetting('timeFormat', '24')"
+                    [class]="
+                      'p-3.5 rounded-xl border text-left cursor-pointer transition ' +
+                      (settings().timeFormat === '24'
+                        ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-950/60 font-semibold text-blue-700 dark:text-blue-300 shadow-2xs'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800')
+                    "
+                  >
+                    <div class="font-bold flex items-center justify-between">
+                      <span>24-Hour Clinical Format</span>
+                      <app-icon
+                        *ngIf="settings().timeFormat === '24'"
+                        name="check"
+                        [size]="14"
+                        className="text-blue-600"
+                      ></app-icon>
+                    </div>
+                    <div
+                      class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5"
+                    >
+                      e.g. 16:30:15 (Military / ICU Standard)
+                    </div>
+                  </button>
+                </div>
               </div>
 
+              <!-- Date Format -->
               <div>
                 <label
-                  class="block font-semibold text-slate-700 dark:text-slate-300 mb-1"
-                  >Date Format</label
+                  class="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5"
+                  >Clinical Date Format Standard</label
                 >
                 <select
                   [ngModel]="settings().dateFormat"
                   (ngModelChange)="updateSetting('dateFormat', $event)"
-                  class="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer"
+                  class="w-full px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="DD/MM/YYYY">
-                    DD/MM/YYYY (e.g. 17/10/2026)
+                  <option
+                    *ngFor="let df of availableDateFormats()"
+                    [value]="df.pattern"
+                  >
+                    {{ df.label }} &nbsp;—&nbsp; (Sample: {{ df.preview }})
                   </option>
-                  <option value="MM/DD/YYYY">
-                    MM/DD/YYYY (e.g. 10/17/2026)
-                  </option>
-                  <option value="YYYY-MM-DD">YYYY-MM-DD (ISO 8601)</option>
                 </select>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                  Controls how dates appear across patient dossiers, appointment
+                  cards, and schedules.
+                </p>
               </div>
 
-              <div>
-                <label
-                  class="block font-semibold text-slate-700 dark:text-slate-300 mb-1"
-                  >Timezone</label
+              <!-- Timezone with Modern Searchable Dropdown Box -->
+              <div class="relative">
+                <div class="flex items-center justify-between mb-1.5">
+                  <label
+                    class="font-semibold text-slate-700 dark:text-slate-300"
+                  >
+                    Hospital Timezone
+                  </label>
+                  <span
+                    class="text-[11px] text-blue-600 dark:text-blue-400 font-mono font-semibold"
+                  >
+                    {{ allTimezones.length }} IANA Regions Available
+                  </span>
+                </div>
+
+                <!-- Dropdown Trigger Button (Single-line Dropdown Box) -->
+                <button
+                  type="button"
+                  (click)="isTzDropdownOpen.set(!isTzDropdownOpen())"
+                  class="w-full flex items-center justify-between px-3.5 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-xs shadow-2xs"
                 >
-                <select
-                  [ngModel]="settings().timeZone"
-                  (ngModelChange)="updateSetting('timeZone', $event)"
-                  class="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white cursor-pointer"
+                  <div class="flex items-center gap-2.5 truncate">
+                    <app-icon
+                      name="clock"
+                      [size]="15"
+                      className="text-blue-600 shrink-0"
+                    ></app-icon>
+                    <span class="font-medium truncate">{{
+                      selectedTimezoneLabel()
+                    }}</span>
+                  </div>
+                  <app-icon
+                    name="chevron-down"
+                    [size]="16"
+                    [className]="
+                      'text-slate-400 transition-transform duration-200 shrink-0 ' +
+                      (isTzDropdownOpen() ? 'rotate-180' : '')
+                    "
+                  ></app-icon>
+                </button>
+
+                <!-- Floating Dropdown Popover with Search & List -->
+                <div
+                  *ngIf="isTzDropdownOpen()"
+                  class="absolute z-50 left-0 right-0 mt-1.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden animate-fade-in"
                 >
-                  <option value="Asia/Kolkata">
-                    India Standard Time (IST - Asia/Kolkata)
-                  </option>
-                  <option value="America/New_York">
-                    Eastern Standard Time (EST - New York)
-                  </option>
-                  <option value="Europe/London">
-                    Greenwich Mean Time (GMT - London)
-                  </option>
-                  <option value="Asia/Dubai">
-                    Gulf Standard Time (GST - Dubai)
-                  </option>
-                  <option value="Asia/Singapore">
-                    Singapore Time (SGT - Singapore)
-                  </option>
-                </select>
+                  <!-- Search input inside dropdown -->
+                  <div
+                    class="p-2.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50"
+                  >
+                    <div class="relative">
+                      <app-icon
+                        name="search"
+                        [size]="14"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                      ></app-icon>
+                      <input
+                        type="text"
+                        [ngModel]="tzFilter()"
+                        (ngModelChange)="tzFilter.set($event)"
+                        placeholder="Type to filter country or city (e.g. Kolkata, London, New York, Tokyo)..."
+                        class="w-full pl-8.5 pr-7 py-1.5 text-xs border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      <button
+                        *ngIf="tzFilter()"
+                        type="button"
+                        (click)="tzFilter.set('')"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer text-xs"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Scrollable Option List -->
+                  <div
+                    class="max-h-60 overflow-y-auto p-1.5 space-y-0.5 text-xs"
+                  >
+                    <div
+                      *ngIf="filteredTimezones().length === 0"
+                      class="py-6 text-center text-slate-400 text-xs"
+                    >
+                      No timezones matching "{{ tzFilter() }}"
+                    </div>
+                    <button
+                      *ngFor="let tz of filteredTimezones()"
+                      type="button"
+                      (click)="selectTimezone(tz.id)"
+                      [class]="
+                        'w-full flex items-center justify-between px-3 py-2 rounded-xl text-left cursor-pointer transition ' +
+                        (tz.id === settings().timeZone
+                          ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold'
+                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800')
+                      "
+                    >
+                      <div class="truncate">
+                        <span>{{ tz.label }}</span>
+                      </div>
+                      <app-icon
+                        *ngIf="tz.id === settings().timeZone"
+                        name="check"
+                        [size]="14"
+                        className="text-blue-600 shrink-0 ml-2"
+                      ></app-icon>
+                    </button>
+                  </div>
+
+                  <!-- Dropdown Footer -->
+                  <div
+                    class="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 text-[11px] text-slate-400 flex items-center justify-between"
+                  >
+                    <span>{{ filteredTimezones().length }} matches</span>
+                    <button
+                      type="button"
+                      (click)="isTzDropdownOpen.set(false)"
+                      class="text-blue-600 dark:text-blue-400 font-semibold hover:underline cursor-pointer"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -505,47 +702,118 @@ type SettingsTab =
               </p>
             </div>
 
-            <form (ngSubmit)="changePassword()" class="space-y-4 text-xs">
+            <form
+              (ngSubmit)="changePassword()"
+              autocomplete="off"
+              class="space-y-4 text-xs"
+            >
               <div>
                 <label
                   class="block font-semibold text-slate-700 dark:text-slate-300 mb-1"
-                  >Current Password *</label
                 >
-                <input
-                  type="password"
-                  required
-                  [(ngModel)]="currentPass"
-                  name="currentPass"
-                  class="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                />
+                  Current Password
+                  <span
+                    class="text-rose-500 font-bold ml-0.5"
+                    aria-hidden="true"
+                    >*</span
+                  >
+                </label>
+                <div class="relative flex items-center">
+                  <input
+                    [type]="showCurrentPass() ? 'text' : 'password'"
+                    required
+                    autocomplete="new-password"
+                    placeholder="Enter your current password"
+                    [(ngModel)]="currentPass"
+                    name="currentPass"
+                    class="w-full pl-3.5 pr-10 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    (click)="showCurrentPass.set(!showCurrentPass())"
+                    [title]="
+                      showCurrentPass() ? 'Hide password' : 'Show password'
+                    "
+                    class="absolute right-2.5 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg cursor-pointer transition"
+                  >
+                    <app-icon
+                      [name]="showCurrentPass() ? 'eye-off' : 'eye'"
+                      [size]="16"
+                    ></app-icon>
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label
                   class="block font-semibold text-slate-700 dark:text-slate-300 mb-1"
-                  >New Password *</label
                 >
-                <input
-                  type="password"
-                  required
-                  [(ngModel)]="newPass"
-                  name="newPass"
-                  class="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                />
+                  New Password
+                  <span
+                    class="text-rose-500 font-bold ml-0.5"
+                    aria-hidden="true"
+                    >*</span
+                  >
+                </label>
+                <div class="relative flex items-center">
+                  <input
+                    [type]="showNewPass() ? 'text' : 'password'"
+                    required
+                    autocomplete="new-password"
+                    placeholder="Enter new strong password"
+                    [(ngModel)]="newPass"
+                    name="newPass"
+                    class="w-full pl-3.5 pr-10 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    (click)="showNewPass.set(!showNewPass())"
+                    [title]="showNewPass() ? 'Hide password' : 'Show password'"
+                    class="absolute right-2.5 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg cursor-pointer transition"
+                  >
+                    <app-icon
+                      [name]="showNewPass() ? 'eye-off' : 'eye'"
+                      [size]="16"
+                    ></app-icon>
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label
                   class="block font-semibold text-slate-700 dark:text-slate-300 mb-1"
-                  >Confirm New Password *</label
                 >
-                <input
-                  type="password"
-                  required
-                  [(ngModel)]="confirmPass"
-                  name="confirmPass"
-                  class="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                />
+                  Confirm New Password
+                  <span
+                    class="text-rose-500 font-bold ml-0.5"
+                    aria-hidden="true"
+                    >*</span
+                  >
+                </label>
+                <div class="relative flex items-center">
+                  <input
+                    [type]="showConfirmPass() ? 'text' : 'password'"
+                    required
+                    autocomplete="new-password"
+                    placeholder="Re-enter new password to confirm"
+                    [(ngModel)]="confirmPass"
+                    name="confirmPass"
+                    class="w-full pl-3.5 pr-10 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    (click)="showConfirmPass.set(!showConfirmPass())"
+                    [title]="
+                      showConfirmPass() ? 'Hide password' : 'Show password'
+                    "
+                    class="absolute right-2.5 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg cursor-pointer transition"
+                  >
+                    <app-icon
+                      [name]="showConfirmPass() ? 'eye-off' : 'eye'"
+                      [size]="16"
+                    ></app-icon>
+                  </button>
+                </div>
               </div>
 
               <div
@@ -553,7 +821,7 @@ type SettingsTab =
               >
                 <button
                   type="submit"
-                  class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs shadow-sm cursor-pointer"
+                  class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs shadow-sm cursor-pointer transition"
                 >
                   Update Password
                 </button>
@@ -637,6 +905,40 @@ export class SettingsPageComponent implements OnInit {
   readonly successMessage = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
 
+  readonly allTimezones = getAllAvailableTimezones();
+  readonly tzFilter = signal("");
+
+  readonly filteredTimezones = computed(() => {
+    const q = this.tzFilter().trim().toLowerCase();
+    if (!q) return this.allTimezones;
+    return this.allTimezones.filter(
+      (tz) =>
+        tz.id.toLowerCase().includes(q) ||
+        tz.label.toLowerCase().includes(q) ||
+        tz.region.toLowerCase().includes(q),
+    );
+  });
+
+  readonly availableDateFormats = computed(() => {
+    return getStandardDateFormats(this.settings().timeZone);
+  });
+
+  readonly formattedCurrentTime = this.settingsService.formattedCurrentTime;
+  readonly formattedCurrentDate = this.settingsService.formattedCurrentDate;
+
+  readonly isTzDropdownOpen = signal(false);
+
+  readonly selectedTimezoneLabel = computed(() => {
+    const current = this.settings().timeZone;
+    const match = this.allTimezones.find((t) => t.id === current);
+    return match ? match.label : current;
+  });
+
+  selectTimezone(id: string): void {
+    this.updateSetting("timeZone", id);
+    this.isTzDropdownOpen.set(false);
+  }
+
   profileName = "";
   profileEmail = "";
   profilePhone = "";
@@ -644,6 +946,9 @@ export class SettingsPageComponent implements OnInit {
   currentPass = "";
   newPass = "";
   confirmPass = "";
+  readonly showCurrentPass = signal(false);
+  readonly showNewPass = signal(false);
+  readonly showConfirmPass = signal(false);
 
   get userRoleDisplay(): string {
     const user = this.currentUser();
@@ -651,6 +956,9 @@ export class SettingsPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.currentPass = "";
+    this.newPass = "";
+    this.confirmPass = "";
     const user = this.currentUser();
     if (user) {
       this.profileName = user.fullName || "";

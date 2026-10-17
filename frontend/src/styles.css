@@ -216,6 +216,27 @@ html.dark tr:hover {
   background-color: var(--cf-surface-muted);
 }
 
+/* Crisp table borders across light and dark modes */
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+tbody tr td {
+  border-bottom: 1px solid var(--cf-border);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Ensure SVG icons maintain crisp strokes and correct color contrast */
+app-icon svg {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
 /* Compact Density Mode */
 html.compact-mode table {
   font-size: 0.8125rem;
