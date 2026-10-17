@@ -1,42 +1,37 @@
 {
   "name": "frontend",
-  "private": true,
   "version": "0.0.0",
-  "type": "module",
+  "private": true,
   "scripts": {
-    "dev": "vite",
-    "start": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "oxlint",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
-    "preview": "vite preview"
+    "ng": "ng",
+    "start": "ng serve --port 5173",
+    "dev": "ng serve --port 5173",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "format": "prettier --write \"src/**/*.{ts,html,css,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,html,css,json}\""
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.9.1",
-    "@tanstack/react-query": "^5.104.1",
-    "axios": "^1.20.0",
-    "clsx": "^2.1.1",
-    "date-fns": "^4.4.0",
-    "lucide-react": "^1.53.0",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "react-hook-form": "^7.89.0",
-    "react-international-phone": "^4.8.0",
-    "react-router-dom": "^7.18.4",
-    "tailwind-merge": "^3.7.0",
-    "zod": "^3.25.76"
+    "@angular/animations": "^21.2.0",
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@angular/forms": "^21.2.0",
+    "@angular/platform-browser": "^21.2.0",
+    "@angular/router": "^21.2.0",
+    "lucide-angular": "^0.556.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.15.0"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "@types/node": "^24.13.3",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
-    "@vitejs/plugin-react": "^6.1.1",
-    "oxlint": "^1.81.0",
+    "@angular/build": "^21.2.27",
+    "@angular/cli": "^21.2.27",
+    "@angular/compiler-cli": "^21.2.25",
+    "@tailwindcss/postcss": "^4.0.0",
+    "postcss": "^8.5.0",
     "prettier": "^3.5.3",
-    "tailwindcss": "^4.3.3",
-    "typescript": "~6.0.2",
-    "vite": "^8.3.0"
+    "tailwindcss": "^4.0.0",
+    "typescript": "~5.9.0"
   }
 }

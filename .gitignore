@@ -18,15 +18,17 @@
 .DS_Store
 Thumbs.db
 
-# Node.js & React Frontend
+# Node.js & Angular Frontend
 node_modules/
 dist/
 build/
 .npm/
 *.log
+.angular/
 frontend/node_modules/
 frontend/dist/
 frontend/build/
+frontend/.angular/
 
 # Environment & Secrets
 .env
