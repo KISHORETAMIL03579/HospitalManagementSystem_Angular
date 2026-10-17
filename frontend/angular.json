@@ -17,6 +17,9 @@
             "index": "src/index.html",
             "outputPath": "dist/frontend",
             "tsConfig": "tsconfig.app.json",
+            "polyfills": [
+              "zone.js"
+            ],
             "assets": [
               {
                 "glob": "**/*",
