@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
-import { ActivatedRoute, Router, RouterModule } from "@angular/router";
+import { ActivatedRoute, RouterModule } from "@angular/router";
 import { AuthService } from "@core/services/auth.service";
 import { IconComponent } from "@shared/components/icon/icon.component";
 

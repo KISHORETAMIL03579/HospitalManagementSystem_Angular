@@ -1,7 +1,7 @@
 import { Injectable, inject, signal, computed } from "@angular/core";
 import { HttpClient, HttpParams } from "@angular/common/http";
 import { Router } from "@angular/router";
-import { Observable, tap, catchError, of, throwError } from "rxjs";
+import { Observable, tap, catchError, throwError } from "rxjs";
 import {
   AuthResponse,
   LoginRequest,
@@ -12,7 +12,6 @@ import {
   ChangePasswordRequest,
   AdminUserDto,
   StaffRegistrationRequest,
-  UserRole,
 } from "../models/auth.models";
 
 import { API_BASE_URL } from "../tokens/api.tokens";

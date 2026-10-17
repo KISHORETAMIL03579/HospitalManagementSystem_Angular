@@ -2,8 +2,6 @@ import { Injectable, inject, signal, computed, effect } from "@angular/core";
 import { AuthService } from "./auth.service";
 import {
   NotificationItem,
-  NotificationCategory,
-  NotificationPriority,
   NotificationPreferences,
 } from "../models/notification.models";
 
@@ -25,7 +23,7 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
 
 const getInitialNotificationsForRole = (
   roleName: string,
-  userName: string,
+  _userName?: string,
 ): NotificationItem[] => {
   const role = roleName.toLowerCase().replace(/[\s_-]/g, "");
 
@@ -241,7 +239,7 @@ export class NotificationService {
 
     effect(() => {
       // Whenever user changes, re-initialize
-      const user = this.authService.currentUser();
+      this.authService.currentUser();
       this.initNotifications();
     });
   }

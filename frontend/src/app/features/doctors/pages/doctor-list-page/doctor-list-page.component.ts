@@ -1,12 +1,10 @@
 import { Component, OnInit, inject, signal, computed } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
-import { Router } from "@angular/router";
 import { DoctorService } from "@core/services/doctor.service";
 import { AuthService } from "@core/services/auth.service";
 import {
   DoctorDirectoryItemDto,
-  DoctorDto,
   DepartmentDto,
   TimeSlotDto,
 } from "@core/models/doctor.models";

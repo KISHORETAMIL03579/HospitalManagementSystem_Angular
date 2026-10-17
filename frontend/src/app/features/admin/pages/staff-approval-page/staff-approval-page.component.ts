@@ -2,7 +2,6 @@ import { Component, OnInit, inject, signal, computed } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { AuthService } from "@core/services/auth.service";
-import { DoctorService } from "@core/services/doctor.service";
 import {
   StaffRegistrationRequest,
   RoleDto,
@@ -10,7 +9,6 @@ import {
   isApprovedStatus,
   isRejectedStatus,
 } from "@core/models/auth.models";
-import { DepartmentDto } from "@core/models/doctor.models";
 import { formatDateByPattern } from "@core/utils/date-utils";
 import { PageHeaderComponent } from "@shared/components/page-header/page-header.component";
 import { StatusBadgeComponent } from "@shared/components/status-badge/status-badge.component";

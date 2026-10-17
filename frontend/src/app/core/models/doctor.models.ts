@@ -114,7 +114,7 @@ export enum ScheduleExceptionType {
   Unavailable = 1,
   FullDayLeave = 2,
   ExtraWorkingHours = 3,
-  CustomHours = 3,
+  CustomHours = 4,
 }
 
 export interface DoctorScheduleExceptionDto {

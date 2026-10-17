@@ -15,11 +15,9 @@ import { DoctorService } from "@core/services/doctor.service";
 import {
   DoctorDto,
   DoctorDirectoryItemDto,
-  DoctorScheduleDto,
   SaveDoctorScheduleDto,
   ScheduleExceptionType,
   DoctorScheduleExceptionDto,
-  ConflictCheckResultDto,
 } from "@core/models/doctor.models";
 import { IconComponent } from "@shared/components/icon/icon.component";
 

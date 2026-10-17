@@ -8,7 +8,6 @@ import {
   SimpleChanges,
   inject,
   signal,
-  computed,
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
@@ -16,11 +15,7 @@ import { DoctorService } from "@core/services/doctor.service";
 import { PatientService } from "@core/services/patient.service";
 import { AppointmentService } from "@core/services/appointment.service";
 import { AuthService } from "@core/services/auth.service";
-import {
-  DoctorDto,
-  TimeSlotDto,
-  DoctorAvailabilityDto,
-} from "@core/models/doctor.models";
+import { DoctorDto, TimeSlotDto } from "@core/models/doctor.models";
 import { PatientDto } from "@core/models/patient.models";
 import { IconComponent } from "@shared/components/icon/icon.component";
 import { formatCurrency } from "@core/utils/format-utils";

@@ -621,7 +621,7 @@ export class AppLayoutComponent {
       });
 
     effect(() => {
-      const mode = this.settingsService.settings().themeMode;
+      this.settingsService.settings();
       if (typeof document !== "undefined") {
         this.isDark.set(document.documentElement.classList.contains("dark"));
       }
