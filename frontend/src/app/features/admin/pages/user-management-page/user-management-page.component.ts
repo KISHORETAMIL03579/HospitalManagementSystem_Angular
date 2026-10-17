@@ -217,9 +217,11 @@ import { formatDateByPattern } from "@core/utils/date-utils";
             <button
               type="button"
               (click)="isCreateUserModalOpen.set(false)"
-              class="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
+              aria-label="Close modal"
+              title="Close modal"
+              class="cf-modal-close-btn"
             >
-              <app-icon name="x" [size]="18"></app-icon>
+              <app-icon name="x" [size]="20"></app-icon>
             </button>
           </div>
 
@@ -314,7 +316,7 @@ import { formatDateByPattern } from "@core/utils/date-utils";
               <button
                 type="button"
                 (click)="isCreateUserModalOpen.set(false)"
-                class="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 rounded-xl cursor-pointer"
+                class="cf-btn-cancel"
               >
                 Cancel
               </button>
@@ -346,9 +348,11 @@ import { formatDateByPattern } from "@core/utils/date-utils";
             <button
               type="button"
               (click)="roleModalUser.set(null)"
-              class="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
+              aria-label="Close modal"
+              title="Close modal"
+              class="cf-modal-close-btn"
             >
-              <app-icon name="x" [size]="18"></app-icon>
+              <app-icon name="x" [size]="20"></app-icon>
             </button>
           </div>
 
@@ -379,7 +383,7 @@ import { formatDateByPattern } from "@core/utils/date-utils";
             <button
               type="button"
               (click)="roleModalUser.set(null)"
-              class="px-4 py-2 text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-100 rounded-xl cursor-pointer"
+              class="cf-btn-cancel"
             >
               Cancel
             </button>

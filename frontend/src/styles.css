@@ -271,3 +271,59 @@ html.compact-mode .cf-compact-stack {
 .cf-sidebar-scroll::-webkit-scrollbar-thumb:hover {
   background-color: rgba(148, 163, 184, 0.65);
 }
+
+/* Modal Close & Cancel Button Standards */
+.cf-modal-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem; /* 36px */
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--cf-border);
+  background-color: var(--cf-surface-muted);
+  color: var(--cf-text);
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.cf-modal-close-btn:hover {
+  background-color: var(--cf-border);
+  color: var(--cf-text);
+  transform: scale(1.05);
+}
+
+.cf-modal-close-btn:active {
+  transform: scale(0.96);
+}
+
+.cf-modal-close-btn:focus-visible {
+  outline: 2px solid var(--cf-focus);
+  outline-offset: 2px;
+}
+
+.cf-btn-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  border: 1px solid var(--cf-border);
+  background-color: var(--cf-surface);
+  color: var(--cf-text);
+  transition: all 150ms ease;
+  cursor: pointer;
+}
+
+.cf-btn-cancel:hover {
+  background-color: var(--cf-surface-muted);
+  border-color: #cbd5e1;
+}
+
+html.dark .cf-btn-cancel:hover {
+  border-color: #475569;
+}

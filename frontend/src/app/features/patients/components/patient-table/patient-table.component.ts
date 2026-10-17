@@ -269,7 +269,9 @@ type SortOrder = "asc" | "desc";
             <button
               type="button"
               (click)="selectedPatient.set(null)"
-              class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg cursor-pointer"
+              aria-label="Close modal"
+              title="Close modal"
+              class="cf-modal-close-btn"
             >
               <app-icon name="x" [size]="20"></app-icon>
             </button>

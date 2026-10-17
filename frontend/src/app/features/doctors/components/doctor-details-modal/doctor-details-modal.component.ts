@@ -108,7 +108,9 @@ import { formatCurrency } from "@core/utils/format-utils";
               <button
                 type="button"
                 (click)="onClose()"
-                class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl cursor-pointer"
+                aria-label="Close modal"
+                title="Close modal"
+                class="cf-modal-close-btn"
               >
                 <app-icon name="x" [size]="20"></app-icon>
               </button>

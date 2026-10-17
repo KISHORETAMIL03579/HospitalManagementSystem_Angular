@@ -134,8 +134,22 @@ import { CommonModule } from "@angular/common";
 
       <!-- X -->
       <ng-container *ngSwitchCase="'x'">
-        <line x1="18" y1="6" x2="6" y2="18" />
-        <line x1="6" y1="6" x2="18" y2="18" />
+        <line
+          x1="18"
+          y1="6"
+          x2="6"
+          y2="18"
+          stroke-width="2.5"
+          stroke-linecap="round"
+        />
+        <line
+          x1="6"
+          y1="6"
+          x2="18"
+          y2="18"
+          stroke-width="2.5"
+          stroke-linecap="round"
+        />
       </ng-container>
 
       <!-- XCircle -->

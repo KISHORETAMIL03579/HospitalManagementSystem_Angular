@@ -665,7 +665,9 @@ type LoginStatusType =
             <button
               type="button"
               (click)="isForgotModalOpen.set(false)"
-              class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              aria-label="Close modal"
+              title="Close modal"
+              class="cf-modal-close-btn"
             >
               <app-icon name="x" [size]="20"></app-icon>
             </button>
@@ -754,7 +756,7 @@ type LoginStatusType =
               <button
                 type="button"
                 (click)="isForgotModalOpen.set(false); forgotError.set(null)"
-                class="px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
+                class="cf-btn-cancel"
               >
                 Cancel
               </button>

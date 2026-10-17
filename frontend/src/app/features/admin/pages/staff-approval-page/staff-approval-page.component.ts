@@ -269,9 +269,11 @@ import { IconComponent } from "@shared/components/icon/icon.component";
             <button
               type="button"
               (click)="selectedRequestForApprove.set(null)"
-              class="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
+              aria-label="Close modal"
+              title="Close modal"
+              class="cf-modal-close-btn"
             >
-              <app-icon name="x" [size]="18"></app-icon>
+              <app-icon name="x" [size]="20"></app-icon>
             </button>
           </div>
 
@@ -304,7 +306,7 @@ import { IconComponent } from "@shared/components/icon/icon.component";
             <button
               type="button"
               (click)="selectedRequestForApprove.set(null)"
-              class="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 rounded-xl cursor-pointer"
+              class="cf-btn-cancel"
             >
               Cancel
             </button>
@@ -336,9 +338,11 @@ import { IconComponent } from "@shared/components/icon/icon.component";
             <button
               type="button"
               (click)="selectedRequestForReject.set(null)"
-              class="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
+              aria-label="Close modal"
+              title="Close modal"
+              class="cf-modal-close-btn"
             >
-              <app-icon name="x" [size]="18"></app-icon>
+              <app-icon name="x" [size]="20"></app-icon>
             </button>
           </div>
 
@@ -369,7 +373,7 @@ import { IconComponent } from "@shared/components/icon/icon.component";
             <button
               type="button"
               (click)="selectedRequestForReject.set(null)"
-              class="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 rounded-xl cursor-pointer"
+              class="cf-btn-cancel"
             >
               Cancel
             </button>
