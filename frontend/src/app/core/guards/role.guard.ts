@@ -49,6 +49,7 @@ export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const router = inject(Router);
 
   if (!authService.isAuthenticated()) {
+    console.warn("[HMS RoleGuard] Not authenticated, redirecting to /login.");
     return router.createUrlTree(["/login"]);
   }
 
@@ -60,6 +61,9 @@ export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
 
   const user = authService.currentUser();
   if (!user) {
+    console.warn(
+      "[HMS RoleGuard] No user data available yet for role check. Fallback to /.",
+    );
     return router.createUrlTree(["/"]);
   }
 
@@ -69,9 +73,18 @@ export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
     normalizeRoleToLevel(user.roleName);
   const allowedLevels = allowedRoles.map(normalizeRoleToLevel);
 
+  console.log(
+    `[HMS RoleGuard] Checking route '${route.routeConfig?.path}'. User Level: ${userLevel}, Required:`,
+    allowedLevels,
+  );
+
   if (allowedLevels.includes(userLevel)) {
+    console.log(`[HMS RoleGuard] Access granted for user '${user.username}'.`);
     return true;
   }
 
+  console.warn(
+    `[HMS RoleGuard] Access denied for user '${user.username}' (level ${userLevel}). Redirecting to /.`,
+  );
   return router.createUrlTree(["/"]);
 };

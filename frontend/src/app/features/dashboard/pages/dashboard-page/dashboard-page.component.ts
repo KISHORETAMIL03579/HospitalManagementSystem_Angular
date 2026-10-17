@@ -748,47 +748,70 @@ export class DashboardPageComponent implements OnInit {
   readonly recentAppointments = computed(() => this.appointments().slice(0, 4));
 
   ngOnInit(): void {
+    console.log(
+      "[HMS Dashboard] Initializing dashboard page. Current User:",
+      this.currentUser()?.username,
+      "Role:",
+      this.currentUser()?.roleName,
+    );
     this.loadData();
   }
 
   loadData(): void {
+    console.log("[HMS Dashboard] Loading dashboard metrics and data sets...");
     if (!this.isPatient()) {
       this.isPatientsLoading.set(true);
       this.patientService.getPatients("", 1, 5).subscribe({
         next: (res) => {
+          console.log("[HMS Dashboard] Patients loaded count:", res.totalCount);
           this.totalPatientsCount.set(res.totalCount);
           this.recentPatients.set(res.items);
           this.isPatientsLoading.set(false);
         },
-        error: () => this.isPatientsLoading.set(false),
+        error: (err) => {
+          console.error("[HMS Dashboard] Failed to load patients:", err);
+          this.isPatientsLoading.set(false);
+        },
       });
     }
 
     this.isDoctorsLoading.set(true);
     this.doctorService.getDoctors().subscribe({
       next: (docs) => {
+        console.log("[HMS Dashboard] Doctors loaded count:", docs.length);
         this.doctors.set(docs);
         this.isDoctorsLoading.set(false);
       },
-      error: () => this.isDoctorsLoading.set(false),
+      error: (err) => {
+        console.error("[HMS Dashboard] Failed to load doctors:", err);
+        this.isDoctorsLoading.set(false);
+      },
     });
 
     this.isDeptsLoading.set(true);
     this.doctorService.getDepartments().subscribe({
       next: (depts) => {
+        console.log("[HMS Dashboard] Departments loaded count:", depts.length);
         this.departments.set(depts);
         this.isDeptsLoading.set(false);
       },
-      error: () => this.isDeptsLoading.set(false),
+      error: (err) => {
+        console.error("[HMS Dashboard] Failed to load departments:", err);
+        this.isDeptsLoading.set(false);
+      },
     });
 
     this.isAppointmentsLoading.set(true);
     this.appointmentService.getAppointments().subscribe({
       next: (apts) => {
+        console.log("[HMS Dashboard] Appointments loaded count:", apts.length);
         this.appointments.set(apts);
         this.isAppointmentsLoading.set(false);
       },
-      error: () => this.isAppointmentsLoading.set(false),
+      error: (err) => {
+        console.error("[HMS Dashboard] Failed to load appointments:", err);
+        this.isAppointmentsLoading.set(false);
+      },
     });
   }
 

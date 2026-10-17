@@ -1,5 +1,7 @@
-import { Component } from "@angular/core";
+import { Component, OnInit, inject } from "@angular/core";
 import { CommonModule } from "@angular/common";
+import { Router } from "@angular/router";
+import { AuthService } from "@core/services/auth.service";
 import { LoginFormComponent } from "@features/auth/components/login-form/login-form.component";
 
 @Component({
@@ -14,4 +16,16 @@ import { LoginFormComponent } from "@features/auth/components/login-form/login-f
     </div>
   `,
 })
-export class LoginPageComponent {}
+export class LoginPageComponent implements OnInit {
+  private authService = inject(AuthService);
+  private router = inject(Router);
+
+  ngOnInit(): void {
+    if (this.authService.isAuthenticated()) {
+      console.log(
+        "[HMS LoginPage] User already has an authenticated session, navigating to '/'",
+      );
+      this.router.navigateByUrl("/");
+    }
+  }
+}

@@ -855,9 +855,32 @@ export class LoginFormComponent {
         password: this.loginPassword,
       })
       .subscribe({
-        next: () => {
+        next: (res) => {
+          console.log(
+            "[HMS Login] Login response received. Navigating to root route ('/')...",
+            res,
+          );
           this.isLoggingIn.set(false);
-          this.router.navigate(["/"]);
+          this.router
+            .navigateByUrl("/")
+            .then((navSuccess) => {
+              console.log(
+                "[HMS Login] navigateByUrl('/') resolved with:",
+                navSuccess,
+              );
+              if (!navSuccess) {
+                console.warn(
+                  "[HMS Login] Navigation returned false, retrying with navigate(['/'])",
+                );
+                this.router.navigate(["/"]);
+              }
+            })
+            .catch((navErr) => {
+              console.error(
+                "[HMS Login] Navigation failed with error:",
+                navErr,
+              );
+            });
         },
         error: (err) => {
           this.isLoggingIn.set(false);

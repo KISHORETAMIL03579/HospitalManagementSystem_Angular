@@ -29,7 +29,7 @@ export class AuthService {
   readonly isLoading = signal<boolean>(false);
 
   readonly isAuthenticated = computed(() => {
-    return !!localStorage.getItem("hms_token") && !!this.currentUser();
+    return !!localStorage.getItem("hms_token");
   });
 
   readonly userRoleName = computed(() => {
@@ -78,35 +78,71 @@ export class AuthService {
   refreshCurrentUser(): void {
     const token = localStorage.getItem("hms_token");
     if (!token) {
+      console.log(
+        "[HMS AuthService] No active session token found in localStorage.",
+      );
       this.currentUser.set(null);
       return;
     }
 
+    console.log(
+      "[HMS AuthService] Found session token, validating via GET /auth/me...",
+    );
     this.getCurrentUser().subscribe({
       next: (user) => {
+        console.log(
+          "[HMS AuthService] Session valid. Active user:",
+          user.username,
+          `(${user.roleName})`,
+        );
         this.currentUser.set(user);
         localStorage.setItem("hms_user", JSON.stringify(user));
       },
-      error: () => {
-        localStorage.removeItem("hms_token");
-        localStorage.removeItem("hms_user");
-        this.currentUser.set(null);
+      error: (err) => {
+        console.warn(
+          "[HMS AuthService] /auth/me validation returned error:",
+          err?.status,
+          err?.message,
+        );
+        if (err?.status === 401) {
+          localStorage.removeItem("hms_token");
+          localStorage.removeItem("hms_user");
+          this.currentUser.set(null);
+        }
       },
     });
   }
 
   login(credentials: LoginRequest): Observable<AuthResponse> {
+    console.log(
+      `[HMS AuthService] POST ${this.baseUrl}/auth/login for user:`,
+      credentials.usernameOrEmail,
+    );
     this.isLoading.set(true);
     return this.http
       .post<AuthResponse>(`${this.baseUrl}/auth/login`, credentials)
       .pipe(
         tap((res) => {
+          console.log(
+            "[HMS AuthService] Login successful! Response payload:",
+            res,
+          );
           localStorage.setItem("hms_token", res.token);
+          if (res.refreshToken) {
+            localStorage.setItem("hms_refresh_token", res.refreshToken);
+          }
           localStorage.setItem("hms_user", JSON.stringify(res.user));
           this.currentUser.set(res.user);
           this.isLoading.set(false);
+          console.log(
+            "[HMS AuthService] Auth state established. Authenticated:",
+            this.isAuthenticated(),
+            "User:",
+            this.currentUser()?.username,
+          );
         }),
         catchError((err) => {
+          console.error("[HMS AuthService] Login request failed:", err);
           this.isLoading.set(false);
           return throwError(() => err);
         }),
