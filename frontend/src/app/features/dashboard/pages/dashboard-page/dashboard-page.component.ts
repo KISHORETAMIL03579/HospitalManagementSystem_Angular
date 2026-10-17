@@ -263,9 +263,7 @@ import { StatusBadgeComponent } from "@shared/components/status-badge/status-bad
             <app-icon name="shield-check" [size]="14"></app-icon>
             <span
               >Across
-              {{
-                isDeptsLoading() ? "..." : departments().length
-              }}
+              {{ isDeptsLoading() ? "..." : departments().length }}
               Departments</span
             >
           </div>
