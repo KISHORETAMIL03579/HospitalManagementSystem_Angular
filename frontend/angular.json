@@ -68,7 +68,6 @@
           "defaultConfiguration": "development",
           "options": {
             "port": 5173,
-            "ssl": true,
             "proxyConfig": "proxy.conf.json"
           }
         }
