@@ -1,4 +1,12 @@
-import { Component, OnInit, inject, signal, computed } from "@angular/core";
+import {
+  Component,
+  OnInit,
+  inject,
+  signal,
+  computed,
+  DestroyRef,
+} from "@angular/core";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute } from "@angular/router";
@@ -15,7 +23,9 @@ import { formatTimeSlot, formatDateByPattern } from "@core/utils/date-utils";
 import { PageHeaderComponent } from "@shared/components/page-header/page-header.component";
 import { StatusBadgeComponent } from "@shared/components/status-badge/status-badge.component";
 import { EmptyStateComponent } from "@shared/components/empty-state/empty-state.component";
+import { PaginationComponent } from "@shared/components/pagination/pagination.component";
 import { IconComponent } from "@shared/components/icon/icon.component";
+import { ConfirmDialogService } from "@shared/services/confirm-dialog.service";
 import { BookingModalComponent } from "@features/appointments/components/booking-modal/booking-modal.component";
 import { AppointmentCalendarViewComponent } from "@features/appointments/components/appointment-calendar-view/appointment-calendar-view.component";
 
@@ -31,6 +41,7 @@ type SortOrder = "asc" | "desc";
     PageHeaderComponent,
     StatusBadgeComponent,
     EmptyStateComponent,
+    PaginationComponent,
     IconComponent,
     BookingModalComponent,
     AppointmentCalendarViewComponent,
@@ -239,7 +250,10 @@ type SortOrder = "asc" | "desc";
                 </td>
               </tr>
               <tr
-                *ngFor="let apt of paginatedAppointments()"
+                *ngFor="
+                  let apt of paginatedAppointments();
+                  trackBy: trackByAppointmentId
+                "
                 (click)="selectedAppointment.set(apt)"
                 class="hover:bg-indigo-50/50 dark:hover:bg-slate-800/80 transition-colors cursor-pointer group"
               >
@@ -371,29 +385,13 @@ type SortOrder = "asc" | "desc";
         </div>
 
         <!-- Pagination Footer -->
-        <div
-          class="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400"
-        >
-          <div>Page {{ currentPage() }} of {{ totalPages() || 1 }}</div>
-          <div class="flex items-center gap-1">
-            <button
-              type="button"
-              [disabled]="currentPage() <= 1"
-              (click)="currentPage.set(currentPage() - 1)"
-              class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 disabled:opacity-40 cursor-pointer"
-            >
-              <app-icon name="chevron-left" [size]="14"></app-icon>
-            </button>
-            <button
-              type="button"
-              [disabled]="currentPage() >= totalPages()"
-              (click)="currentPage.set(currentPage() + 1)"
-              class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 disabled:opacity-40 cursor-pointer"
-            >
-              <app-icon name="chevron-right" [size]="14"></app-icon>
-            </button>
-          </div>
-        </div>
+        <app-pagination
+          [currentPage]="currentPage()"
+          [totalPages]="totalPages()"
+          [totalItems]="filteredAppointments().length"
+          itemName="appointments"
+          (pageChange)="currentPage.set($event)"
+        ></app-pagination>
       </div>
 
       <!-- Appointment Details Modal -->
@@ -513,6 +511,8 @@ export class AppointmentListPageComponent implements OnInit {
   private authService = inject(AuthService);
   private settingsService = inject(SettingsService);
   private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
+  private confirmDialogService = inject(ConfirmDialogService);
 
   readonly isPatient = this.authService.isPatient;
   readonly AppointmentStatus = AppointmentStatus;
@@ -540,18 +540,20 @@ export class AppointmentListPageComponent implements OnInit {
     this.doctorService.getDoctors().subscribe((docs) => this.doctors.set(docs));
     this.fetchAppointments();
 
-    this.route.queryParams.subscribe((params) => {
-      if (params["view"] === "calendar") {
-        this.viewMode.set("calendar");
-      }
-      const aptId = params["appointmentId"];
-      if (aptId) {
-        const match = this.allAppointments().find(
-          (a) => String(a.appointmentId) === aptId,
-        );
-        if (match) this.selectedAppointment.set(match);
-      }
-    });
+    this.route.queryParams
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        if (params["view"] === "calendar") {
+          this.viewMode.set("calendar");
+        }
+        const aptId = params["appointmentId"];
+        if (aptId) {
+          const match = this.allAppointments().find(
+            (a) => String(a.appointmentId) === aptId,
+          );
+          if (match) this.selectedAppointment.set(match);
+        }
+      });
   }
 
   fetchAppointments(): void {
@@ -642,7 +644,21 @@ export class AppointmentListPageComponent implements OnInit {
     return formatTimeSlot(slot, s.timeFormat, s.timeZone);
   }
 
-  updateStatus(appointmentId: number, status: AppointmentStatus): void {
+  async updateStatus(
+    appointmentId: number,
+    status: AppointmentStatus,
+  ): Promise<void> {
+    if (status === AppointmentStatus.Cancelled) {
+      const confirmed = await this.confirmDialogService.confirm({
+        title: "Cancel Appointment",
+        message:
+          "Are you sure you want to cancel this scheduled appointment? This action cannot be undone.",
+        confirmText: "Yes, Cancel",
+        variant: "danger",
+      });
+      if (!confirmed) return;
+    }
+
     this.appointmentService
       .updateAppointmentStatus(appointmentId, status)
       .subscribe({
@@ -692,5 +708,9 @@ export class AppointmentListPageComponent implements OnInit {
       status === 50 ||
       String(status) === "Cancelled"
     );
+  }
+
+  trackByAppointmentId(_: number, a: AppointmentDto): number {
+    return a.appointmentId;
   }
 }

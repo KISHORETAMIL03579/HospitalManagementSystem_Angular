@@ -1,4 +1,4 @@
-import { Component, Input } from "@angular/core";
+import { Component, Input, ChangeDetectionStrategy } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { IconComponent } from "../icon/icon.component";
 import { AppointmentStatus } from "../../../core/models/appointment.models";
@@ -10,6 +10,7 @@ export type BadgeVariant =
   selector: "app-status-badge",
   standalone: true,
   imports: [CommonModule, IconComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- 1. Appointment Status Badge -->
     <ng-container

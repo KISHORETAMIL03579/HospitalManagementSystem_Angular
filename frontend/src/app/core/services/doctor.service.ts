@@ -1,6 +1,6 @@
 import { Injectable, inject } from "@angular/core";
 import { HttpClient, HttpParams } from "@angular/common/http";
-import { Observable } from "rxjs";
+import { Observable, shareReplay } from "rxjs";
 import {
   DepartmentDto,
   DoctorDto,
@@ -126,10 +126,19 @@ export class DoctorService {
     );
   }
 
-  getDepartments(): Observable<DepartmentDto[]> {
-    return this.http.get<DepartmentDto[]>(
-      `${this.baseUrl}/doctors/departments`,
-    );
+  private departments$?: Observable<DepartmentDto[]>;
+
+  getDepartments(forceRefresh = false): Observable<DepartmentDto[]> {
+    if (!this.departments$ || forceRefresh) {
+      this.departments$ = this.http
+        .get<DepartmentDto[]>(`${this.baseUrl}/doctors/departments`)
+        .pipe(shareReplay({ bufferSize: 1, refCount: false }));
+    }
+    return this.departments$;
+  }
+
+  clearCache(): void {
+    this.departments$ = undefined;
   }
 
   createDoctor(data: CreateDoctorRequest): Observable<DoctorDto> {

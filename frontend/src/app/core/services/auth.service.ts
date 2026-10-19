@@ -1,7 +1,7 @@
 import { Injectable, inject, signal, computed } from "@angular/core";
 import { HttpClient, HttpParams } from "@angular/common/http";
 import { Router } from "@angular/router";
-import { Observable, tap, catchError, throwError } from "rxjs";
+import { Observable, tap, catchError, throwError, shareReplay } from "rxjs";
 import {
   AuthResponse,
   LoginRequest,
@@ -90,6 +90,7 @@ export class AuthService {
     localStorage.removeItem("hms_user");
     this.token.set(null);
     this.currentUser.set(null);
+    this.roles$ = undefined;
   }
 
   refreshCurrentUser(): void {
@@ -178,8 +179,15 @@ export class AuthService {
     return this.http.get<UserDto>(`${this.baseUrl}/auth/me`);
   }
 
-  getRoles(): Observable<RoleDto[]> {
-    return this.http.get<RoleDto[]>(`${this.baseUrl}/auth/roles`);
+  private roles$?: Observable<RoleDto[]>;
+
+  getRoles(forceRefresh = false): Observable<RoleDto[]> {
+    if (!this.roles$ || forceRefresh) {
+      this.roles$ = this.http
+        .get<RoleDto[]>(`${this.baseUrl}/auth/roles`)
+        .pipe(shareReplay({ bufferSize: 1, refCount: false }));
+    }
+    return this.roles$;
   }
 
   refreshToken(refreshToken: string): Observable<AuthResponse> {

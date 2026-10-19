@@ -11,6 +11,7 @@ import {
 import { PageHeaderComponent } from "@shared/components/page-header/page-header.component";
 import { EmptyStateComponent } from "@shared/components/empty-state/empty-state.component";
 import { IconComponent } from "@shared/components/icon/icon.component";
+import { ConfirmDialogService } from "@shared/services/confirm-dialog.service";
 import { formatDateByPattern } from "@core/utils/date-utils";
 
 @Component({
@@ -130,7 +131,7 @@ import { formatDateByPattern } from "@core/utils/date-utils";
                 </td>
               </tr>
               <tr
-                *ngFor="let u of filteredUsers()"
+                *ngFor="let u of filteredUsers(); trackBy: trackByUserId"
                 class="hover:bg-indigo-50/50 dark:hover:bg-slate-800/80 transition-colors"
               >
                 <td class="py-3.5 pl-4 pr-3 truncate">
@@ -402,6 +403,7 @@ import { formatDateByPattern } from "@core/utils/date-utils";
 })
 export class UserManagementPageComponent implements OnInit {
   private authService = inject(AuthService);
+  private confirmDialogService = inject(ConfirmDialogService);
 
   readonly users = signal<AdminUserDto[]>([]);
   readonly roles = signal<RoleDto[]>([]);
@@ -477,12 +479,26 @@ export class UserManagementPageComponent implements OnInit {
     return formatDateByPattern(iso, "MMM dd, yyyy");
   }
 
-  toggleActive(u: AdminUserDto): void {
-    this.authService.toggleUserStatus(u.userId, !u.isActive).subscribe({
+  async toggleActive(u: AdminUserDto): Promise<void> {
+    const willBeActive = !u.isActive;
+    const actionLabel = willBeActive ? "Activate" : "Deactivate";
+
+    const confirmed = await this.confirmDialogService.confirm({
+      title: `${actionLabel} User Account`,
+      message: willBeActive
+        ? `Are you sure you want to activate ${u.fullName}'s account? They will regain access to CareFlow HMS.`
+        : `Are you sure you want to deactivate ${u.fullName}'s account? They will immediately be barred from signing in.`,
+      confirmText: `Yes, ${actionLabel}`,
+      variant: willBeActive ? "primary" : "danger",
+    });
+
+    if (!confirmed) return;
+
+    this.authService.toggleUserStatus(u.userId, willBeActive).subscribe({
       next: () => {
         this.feedback.set({
           type: "success",
-          message: `User ${u.fullName} is now ${!u.isActive ? "Active" : "Inactive"}.`,
+          message: `User ${u.fullName} is now ${willBeActive ? "Active" : "Inactive"}.`,
         });
         this.fetchUsers();
       },
@@ -556,5 +572,9 @@ export class UserManagementPageComponent implements OnInit {
           });
         },
       });
+  }
+
+  trackByUserId(_: number, u: AdminUserDto): number {
+    return u.userId;
   }
 }

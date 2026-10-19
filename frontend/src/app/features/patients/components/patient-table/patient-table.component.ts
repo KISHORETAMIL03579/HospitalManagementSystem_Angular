@@ -1,4 +1,12 @@
-import { Component, OnInit, inject, signal, computed } from "@angular/core";
+import {
+  Component,
+  OnInit,
+  inject,
+  signal,
+  computed,
+  DestroyRef,
+} from "@angular/core";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute, RouterModule } from "@angular/router";
@@ -7,6 +15,7 @@ import { PatientDto, Gender } from "@core/models/patient.models";
 import { calculateAge, formatDate } from "@core/utils/format-utils";
 import { IconComponent } from "@shared/components/icon/icon.component";
 import { EmptyStateComponent } from "@shared/components/empty-state/empty-state.component";
+import { PaginationComponent } from "@shared/components/pagination/pagination.component";
 import { BookingModalComponent } from "@features/appointments/components/booking-modal/booking-modal.component";
 
 type SortField =
@@ -22,6 +31,7 @@ type SortOrder = "asc" | "desc";
     RouterModule,
     IconComponent,
     EmptyStateComponent,
+    PaginationComponent,
     BookingModalComponent,
   ],
   template: `
@@ -154,7 +164,7 @@ type SortOrder = "asc" | "desc";
                 </td>
               </tr>
               <tr
-                *ngFor="let p of paginatedPatients()"
+                *ngFor="let p of paginatedPatients(); trackBy: trackByPatientId"
                 (click)="openPatientDetails(p)"
                 class="hover:bg-blue-50/60 dark:hover:bg-slate-800/80 transition-colors cursor-pointer group"
               >
@@ -212,29 +222,13 @@ type SortOrder = "asc" | "desc";
         </div>
 
         <!-- Pagination Footer -->
-        <div
-          class="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400"
-        >
-          <div>Page {{ currentPage() }} of {{ totalPages() || 1 }}</div>
-          <div class="flex items-center gap-1">
-            <button
-              type="button"
-              [disabled]="currentPage() <= 1"
-              (click)="goToPage(currentPage() - 1)"
-              class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 cursor-pointer"
-            >
-              <app-icon name="chevron-left" [size]="14"></app-icon>
-            </button>
-            <button
-              type="button"
-              [disabled]="currentPage() >= totalPages()"
-              (click)="goToPage(currentPage() + 1)"
-              class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 cursor-pointer"
-            >
-              <app-icon name="chevron-right" [size]="14"></app-icon>
-            </button>
-          </div>
-        </div>
+        <app-pagination
+          [currentPage]="currentPage()"
+          [totalPages]="totalPages()"
+          [totalItems]="sortedPatients().length"
+          itemName="patients"
+          (pageChange)="goToPage($event)"
+        ></app-pagination>
       </div>
 
       <!-- Patient Details Drawer / Modal -->
@@ -376,6 +370,7 @@ type SortOrder = "asc" | "desc";
 export class PatientTableComponent implements OnInit {
   private patientService = inject(PatientService);
   private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
 
   searchTerm = "";
   readonly sortField = signal<SortField>("createdAt");
@@ -392,15 +387,17 @@ export class PatientTableComponent implements OnInit {
 
   ngOnInit(): void {
     this.fetchPatients();
-    this.route.queryParams.subscribe((params) => {
-      const pid = params["patientId"];
-      if (pid) {
-        const match = this.allPatients().find(
-          (p) => String(p.patientId) === pid,
-        );
-        if (match) this.selectedPatient.set(match);
-      }
-    });
+    this.route.queryParams
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        const pid = params["patientId"];
+        if (pid) {
+          const match = this.allPatients().find(
+            (p) => String(p.patientId) === pid,
+          );
+          if (match) this.selectedPatient.set(match);
+        }
+      });
   }
 
   fetchPatients(): void {
@@ -498,5 +495,9 @@ export class PatientTableComponent implements OnInit {
     this.bookingPatientId = p.patientId;
     this.selectedPatient.set(null);
     this.isBookingOpen.set(true);
+  }
+
+  trackByPatientId(_: number, p: PatientDto): number {
+    return p.patientId;
   }
 }

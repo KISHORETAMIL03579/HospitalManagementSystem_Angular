@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed, effect } from "@angular/core";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { CommonModule } from "@angular/common";
 import { Router, RouterModule, NavigationEnd } from "@angular/router";
 import { filter } from "rxjs";
@@ -626,7 +627,10 @@ export class AppLayoutComponent {
 
   constructor() {
     this.router.events
-      .pipe(filter((e) => e instanceof NavigationEnd))
+      .pipe(
+        filter((e) => e instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
       .subscribe((e: any) => {
         this.currentUrl.set(e.urlAfterRedirects || e.url);
         if (this.currentUrl().startsWith("/admin")) {

@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, signal } from "@angular/core";
+import { Component, OnInit, inject, signal, DestroyRef } from "@angular/core";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute, RouterModule } from "@angular/router";
@@ -224,6 +225,7 @@ import { IconComponent } from "@shared/components/icon/icon.component";
 export class ResetPasswordPageComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private authService = inject(AuthService);
+  private destroyRef = inject(DestroyRef);
 
   email = "";
   token = "";
@@ -237,10 +239,12 @@ export class ResetPasswordPageComponent implements OnInit {
   readonly isSuccess = signal(false);
 
   ngOnInit(): void {
-    this.route.queryParams.subscribe((params) => {
-      this.token = params["token"] || "";
-      this.email = params["email"] || "";
-    });
+    this.route.queryParams
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        this.token = params["token"] || "";
+        this.email = params["email"] || "";
+      });
   }
 
   strength() {

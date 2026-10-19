@@ -7,6 +7,7 @@ import { inject } from "@angular/core";
 import { catchError, tap, throwError } from "rxjs";
 import { Router } from "@angular/router";
 import { AuthService } from "../services/auth.service";
+import { environment } from "../../../environments/environment";
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
@@ -22,13 +23,15 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     });
   }
 
-  console.log(
-    `[HMS HTTP] --> ${req.method} ${req.url}${token ? " (Bearer token attached)" : " (No token)"}`,
-  );
+  if (!environment.production) {
+    console.log(
+      `[HMS HTTP] --> ${req.method} ${req.url}${token ? " (Bearer token attached)" : " (No token)"}`,
+    );
+  }
 
   return next(authReq).pipe(
     tap((event) => {
-      if (event instanceof HttpResponse) {
+      if (!environment.production && event instanceof HttpResponse) {
         console.log(`[HMS HTTP] <-- ${event.status} ${req.method} ${req.url}`);
       }
     }),

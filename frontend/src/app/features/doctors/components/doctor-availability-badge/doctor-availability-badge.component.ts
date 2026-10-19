@@ -1,4 +1,4 @@
-import { Component, Input } from "@angular/core";
+import { Component, Input, ChangeDetectionStrategy } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { IconComponent } from "@shared/components/icon/icon.component";
 
@@ -6,6 +6,7 @@ import { IconComponent } from "@shared/components/icon/icon.component";
   selector: "app-doctor-availability-badge",
   standalone: true,
   imports: [CommonModule, IconComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="inline-flex flex-col items-start gap-1">
       <span
