@@ -37,6 +37,7 @@ import { IconComponent } from "@shared/components/icon/icon.component";
         [placeholder]="placeholder"
         [value]="value"
         (input)="onInput($event)"
+        (blur)="onBlur()"
         [attr.aria-label]="placeholder"
         class="w-full pl-10 pr-9 py-2 text-xs sm:text-sm border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-colors"
       />
@@ -91,6 +92,10 @@ export class SearchInputComponent implements ControlValueAccessor {
     this.onChange(this.value);
     this.valueChange.emit(this.value);
     this.search.emit(this.value);
+  }
+
+  onBlur(): void {
+    this.onTouched();
   }
 
   clear(): void {

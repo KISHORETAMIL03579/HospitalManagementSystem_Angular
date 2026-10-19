@@ -73,13 +73,7 @@ export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
     normalizeRoleToLevel(user.roleName);
   const allowedLevels = allowedRoles.map(normalizeRoleToLevel);
 
-  console.log(
-    `[HMS RoleGuard] Checking route '${route.routeConfig?.path}'. User Level: ${userLevel}, Required:`,
-    allowedLevels,
-  );
-
   if (allowedLevels.includes(userLevel)) {
-    console.log(`[HMS RoleGuard] Access granted for user '${user.username}'.`);
     return true;
   }
 
