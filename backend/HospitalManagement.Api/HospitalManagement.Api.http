@@ -1,6 +1,26 @@
-@HospitalManagement.Api_HostAddress = http://localhost:5290
+@HospitalManagement.Api_HostAddress = http://localhost:5000
 
-GET {{HospitalManagement.Api_HostAddress}}/weatherforecast/
+### Swagger Specification
+GET {{HospitalManagement.Api_HostAddress}}/swagger/v1/swagger.json
 Accept: application/json
 
 ###
+
+### Get Public Roles
+GET {{HospitalManagement.Api_HostAddress}}/api/v1/auth/roles
+Accept: application/json
+
+###
+
+### Get Hospital Departments
+GET {{HospitalManagement.Api_HostAddress}}/api/v1/doctors/departments
+Accept: application/json
+
+###
+
+### Get Doctor Directory
+GET {{HospitalManagement.Api_HostAddress}}/api/v1/doctors/directory
+Accept: application/json
+
+###
+

@@ -49,6 +49,7 @@ public class AdminUsersController : ControllerBase
         try
         {
             var user = await _adminUserService.CreateUserByAdminAsync(request, cancellationToken);
+            _logger.LogInformation("Admin created user account #{UserId} ('{Username}')", user.UserId, user.Username);
             return CreatedAtAction(nameof(GetAllUsers), new { id = user.UserId }, user);
         }
         catch (Exception ex)
@@ -78,6 +79,7 @@ public class AdminUsersController : ControllerBase
         try
         {
             var updated = await _adminUserService.UpdateUserByAdminAsync(id, request, cancellationToken);
+            _logger.LogInformation("Admin updated details for user #{UserId}", id);
             return Ok(updated);
         }
         catch (KeyNotFoundException ex)
@@ -111,6 +113,7 @@ public class AdminUsersController : ControllerBase
         try
         {
             var updated = await _adminUserService.UpdateUserRoleByAdminAsync(id, request.RoleId, cancellationToken);
+            _logger.LogInformation("Admin changed role for user #{UserId} to RoleId {RoleId}", id, request.RoleId);
             return Ok(updated);
         }
         catch (KeyNotFoundException ex)
@@ -147,6 +150,7 @@ public class AdminUsersController : ControllerBase
         try
         {
             var updated = await _adminUserService.ToggleUserStatusByAdminAsync(id, adminUserId, request.IsActive, cancellationToken);
+            _logger.LogInformation("Admin #{AdminId} changed status for user #{UserId} to IsActive={IsActive}", adminUserId, id, request.IsActive);
             return Ok(updated);
         }
         catch (KeyNotFoundException ex)
@@ -183,6 +187,7 @@ public class AdminUsersController : ControllerBase
         try
         {
             await _adminUserService.DeleteUserByAdminAsync(id, adminUserId, cancellationToken);
+            _logger.LogInformation("Admin #{AdminId} soft-deleted user #{UserId}", adminUserId, id);
             return Ok(new { message = "User account deactivated and archived successfully. Medical records preserved." });
         }
         catch (KeyNotFoundException ex)
