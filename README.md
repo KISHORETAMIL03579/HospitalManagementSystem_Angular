@@ -10,14 +10,31 @@
 
 ---
 
-## 🏛️ Full Architectural Flow
+## 📚 Table of Contents
+1. [Architectural Overview](#-architectural-overview)
+2. [Junior Developer Guide & Mental Model](#-junior-developer-guide--mental-model)
+3. [Reusable Shared UI Components](#-reusable-shared-ui-components)
+4. [Centralized API Base URL Configuration](#-centralized-api-base-url-configuration)
+5. [Key Modules & Capabilities](#-key-modules--capabilities)
+6. [Repository Structure](#-repository-structure)
+7. [Getting Started & Local Setup](#-getting-started--local-setup)
+8. [Performance & Coding Standards](#-performance--coding-standards)
+9. [Available Scripts & Quality Suite](#-available-scripts--quality-suite)
+
+---
+
+## 🏛️ Architectural Overview
+
+CareFlow HMS is structured strictly following **Clean Architecture** and **Domain-Driven Design (DDD)** principles:
 
 ```mermaid
 flowchart TD
     subgraph Client ["Client Layer — Angular 21 (Standalone + Signals)"]
-        UI["Standalone UI Components & Pages\n(Dashboard, Patients, Doctors, Appointments, Admin, Settings)"]
+        UI["Standalone UI Pages & Components\n(Dashboard, Patients, Doctors, Appointments, Admin, Settings)"]
+        SharedUI["Reusable Shared UI Components\n(Modal, Pagination, SearchInput, StatCard, SegmentedControl)"]
         State["Reactive State Management\n(Angular Signals: signal, computed, effect)"]
         Forms["Typed Forms & Validation\n(ReactiveFormsModule & International Phone)"]
+        DialogSvc["Dynamic Dialog Service\n(ConfirmDialogService via createComponent)"]
         Services["Core Service Layer\n(AuthService, PatientService, DoctorService, AppointmentService, SettingsService)"]
         Token["Configurable API Base URL Token\n(API_BASE_URL InjectionToken via app.config.ts)"]
         Interceptor["HTTP Interceptors\n(authInterceptor: Bearer JWT & 401 Catch)"]
@@ -57,8 +74,11 @@ flowchart TD
     end
 
     %% Flow connections
+    UI --> SharedUI
     UI --> State
     UI --> Forms
+    UI --> DialogSvc
+    DialogSvc --> State
     State --> Services
     Services --> Token
     Services --> Interceptor
@@ -75,9 +95,149 @@ flowchart TD
 
 ---
 
+## 🎓 Junior Developer Guide & Mental Model
+
+Welcome to the CareFlow HMS engineering team! Below is the core mental model you need to understand to write clean, bug-free, performant code in this repository.
+
+### 1. State Management: Signals vs. RxJS Observables
+In Angular 21, we use **Angular Signals** for local UI state and **RxJS Observables** for asynchronous data streams (such as HTTP requests):
+
+| Mechanism | When to Use | Example in Code |
+| :--- | :--- | :--- |
+| **`signal(initialValue)`** | Reactive synchronous UI state (e.g. `isLoading`, `selectedDate`, `activeTab`, `isModalOpen`). | `readonly isBookingModalOpen = signal(false);` |
+| **`computed(() => ...)`** | Derived synchronous values that automatically recompute when dependent signals update. | `readonly confirmedCount = computed(() => this.allAppointments().filter(a => a.status === 'Confirmed').length);` |
+| **`Observable<T>`** | Async HTTP calls, event streams, or router notifications. | `doctorService.getDoctors(): Observable<DoctorDto[]>` |
+| **`takeUntilDestroyed()`** | Pipe onto long-lived observables (`router.events`, `route.queryParams`) to auto-unsubscribe and prevent memory leaks. | `this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(...)` |
+
+### 2. Can We Use `new MyComponent()` in Angular?
+**NO.** Never instantiate an Angular component using the JavaScript `new` operator (e.g., `new BookingModalComponent()`).
+- **Why?** `new` only runs the TypeScript constructor. It **does NOT** trigger Angular Dependency Injection, does **NOT** compile or render HTML/CSS templates, does **NOT** attach to Angular Change Detection, and does **NOT** run lifecycle hooks (`ngOnInit`, `ngOnChanges`).
+- **What to do instead:**
+  1. **Declarative Component (Preferred)**: Put `<app-modal>` or `<app-pagination>` directly in your HTML template and bind properties with `[isOpen]="isModalOpen()"`.
+  2. **Imperative Dynamic Dialog**: Inject [`ConfirmDialogService`](file:///d:/Projects/HospitalManagementSystem_Angular/frontend/src/app/shared/services/confirm-dialog.service.ts), which internally uses `createComponent(ConfirmDialogComponent, { environmentInjector })` to dynamically instantiate, attach, and destroy components properly.
+
+### 3. Step-by-Step Guide: Adding a New Feature
+Follow this 5-step checklist whenever creating a new page or capability (e.g. `Prescriptions`):
+
+1. **Step 1: Define TypeScript Models (`src/app/core/models/prescription.models.ts`)**
+   - Create strong interfaces/DTOs for requests and responses matching backend API contracts.
+2. **Step 2: Create Core Service (`src/app/core/services/prescription.service.ts`)**
+   - Inject `HttpClient` and `API_BASE_URL`.
+   - Use `shareReplay({ bufferSize: 1, refCount: false })` if the endpoint returns static/reference data.
+3. **Step 3: Create Feature Page Component (`src/app/features/prescriptions/pages/...`)**
+   - Declare as `standalone: true`.
+   - Set `changeDetection: ChangeDetectionStrategy.OnPush` where applicable.
+   - Use shared components: `<app-page-header>`, `<app-pagination>`, `<app-search-input>`, `<app-modal>`, `<app-status-badge>`.
+4. **Step 4: Register Route in `src/app/app.routes.ts`**
+   - Use lazy loading: `loadComponent: () => import('./features/prescriptions/...').then(m => m.PrescriptionsPageComponent)`.
+   - Attach guards if protected: `canActivate: [authGuard, roleGuard]`, `data: { roles: STAFF_ROLES }`.
+5. **Step 5: Run Code Quality Suite**
+   - Run `npm run lint` and `npm run build` in `frontend/` to verify zero errors before committing.
+
+---
+
+## 🧩 Reusable Shared UI Components
+
+To maintain visual consistency and eliminate duplicate code across pages, CareFlow provides standardized components in `src/app/shared/components/`:
+
+### 1. Common Modal (`<app-modal>`)
+Replaces manual backdrop overlays, blur styles, and escape-key handling:
+```html
+<app-modal
+  [isOpen]="isModalOpen()"
+  title="Edit Patient Details"
+  subtitle="Update demographic records and emergency contact info."
+  icon="user"
+  size="xl"
+  (close)="isModalOpen.set(false)"
+>
+  <!-- Main modal body content here -->
+  <form (ngSubmit)="save()">
+    ...
+  </form>
+
+  <!-- Optional Footer Slot -->
+  <div footer>
+    <button type="button" (click)="isModalOpen.set(false)" class="cf-btn-cancel">Cancel</button>
+    <button type="submit" class="cf-btn-primary">Save Changes</button>
+  </div>
+</app-modal>
+```
+
+### 2. Table Pagination (`<app-pagination>`)
+Standardizes page navigation, boundary clamping, and disabled states across data tables:
+```html
+<app-pagination
+  [currentPage]="currentPage()"
+  [totalPages]="totalPages()"
+  [totalItems]="filteredPatients().length"
+  itemName="patients"
+  (pageChange)="currentPage.set($event)"
+></app-pagination>
+```
+
+### 3. Search Input (`<app-search-input>`)
+Search bar with debounced input, search icon, and automatic clear `(X)` button. Compatible with `[(ngModel)]` or two-way binding:
+```html
+<app-search-input
+  placeholder="Search by name, MRN, phone..."
+  [(ngModel)]="searchQuery"
+  (search)="onSearchChange($event)"
+></app-search-input>
+```
+
+### 4. Dynamic Confirmation Service (`ConfirmDialogService`)
+Open confirmation dialogs directly from TypeScript code without cluttering HTML templates:
+```typescript
+import { ConfirmDialogService } from '@shared/services/confirm-dialog.service';
+
+export class AppointmentListPageComponent {
+  private confirmDialog = inject(ConfirmDialogService);
+
+  async cancelAppointment(appointmentId: number) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'Cancel Appointment',
+      message: 'Are you sure you want to cancel this appointment? This action cannot be undone.',
+      confirmText: 'Yes, Cancel',
+      variant: 'danger' // 'danger' | 'warning' | 'primary' | 'info'
+    });
+
+    if (confirmed) {
+      this.appointmentService.updateAppointmentStatus(appointmentId, AppointmentStatus.Cancelled).subscribe();
+    }
+  }
+}
+```
+
+### 5. Stat Metric Card (`<app-stat-card>`)
+Displays KPI metric blocks with titles, numbers, icons, and OnPush change detection:
+```html
+<app-stat-card
+  title="Total Visits"
+  [value]="totalAppointments()"
+  icon="calendar"
+  iconColorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400"
+></app-stat-card>
+```
+
+### 6. Segmented Control / Tabs (`<app-segmented-control>`)
+Accessible pill switchers with ARIA tablist roles and badge support:
+```html
+<app-segmented-control
+  [options]="[
+    { label: 'Table View', value: 'table', icon: 'activity' },
+    { label: 'Calendar View', value: 'calendar', icon: 'calendar' }
+  ]"
+  [selected]="viewMode()"
+  (selectionChange)="viewMode.set($event)"
+></app-segmented-control>
+```
+
+---
+
 ## 🌐 Centralized API Base URL Configuration
 
-The frontend provides a **single, centralized configuration point** for the backend API URL. Rather than hardcoding URLs across services, all HTTP requests inject `API_BASE_URL`:
+The frontend provides a **single, centralized configuration point** for backend API communication:
 
 ```
 ┌─────────────────────────────────┐
@@ -96,8 +256,8 @@ The frontend provides a **single, centralized configuration point** for the back
 └─────────────────────────────────┘
 ```
 
-- **Local Development**: In `src/app/app.config.ts`, `API_BASE_URL` uses `environment.apiBaseUrl` (`/api/v1`), which proxies seamlessly to `http://localhost:5000` via `proxy.conf.json`.
-- **Production / Staging**: Change `apiBaseUrl` in `src/environments/environment.prod.ts` or directly in `app.config.ts` without touching any service or component code.
+- **Local Development**: `environment.apiBaseUrl` (`/api/v1`) is proxied to `http://localhost:5000` via `proxy.conf.json`.
+- **Production / Staging**: Change `apiBaseUrl` in `src/environments/environment.prod.ts` or directly in `app.config.ts` without modifying any service or component.
 
 ---
 
@@ -106,53 +266,32 @@ The frontend provides a **single, centralized configuration point** for the back
 ### 1. 🔐 Authentication & RBAC (Role-Based Access Control)
 - **Role Hierarchy**: `Admin (100)`, `HospitalManager (90)`, `Doctor (80)`, `Pharmacist (75)`, `LabTechnician (70)`, `Nurse (60)`, `Receptionist (40)`, `Patient (20)`.
 - **Functional Route Guards**:
-  - `authGuard`: Verifies valid JWT token and authenticates session.
-  - `roleGuard`: Ensures route access matches user role hierarchy and privileges.
-- **Onboarding Workflow**: Staff registration submissions, admin authorization/rejection with notes, account status toggle.
+  - `authGuard`: Verifies valid JWT token and active session.
+  - `roleGuard`: Enforces role hierarchy permissions on staff/admin pages.
+- **Onboarding Workflow**: Staff registration requests, admin approval/rejection with custom system role assignments.
 
 ### 2. 📊 Hospital Operations Dashboard
-- **Role-Adaptive Interface**: Automatically toggles between Patient Healthcare Portal and Staff Hospital Management System.
+- **Role-Adaptive Interface**: Displays clinical analytics for staff and a Personal Health Summary for registered patients.
 - **Real-Time Clock**: Live digital clock widget synchronized with regional timezone settings.
-- **Operational Metrics**: Real-time patient counts, appointments today, active doctors on duty, department loads.
+- **Operational Metrics**: Active patient counts, appointments today, doctors on duty, and department capacity.
 
 ### 3. 👥 Patient Directory & Health Records
-- **Demographic Management**: Full demographics, date of birth past-validation, blood group enums, international phone formatting (E.164).
-- **Patient Search & Table**: Real-time search by MRN, name, phone; column sorting; pagination; action menus.
-- **Patient Profile View**: Emergency contact details, medical record history, quick appointment booking.
+- **Demographic Management**: Full demographics, past-date birth validation, blood group options, international phone validation (E.164).
+- **Patient Table**: Search by MRN, name, phone; sorting; `<app-pagination>`; quick appointment booking.
+- **Patient Health Dossier**: Emergency contacts, visit history, clinical notes.
 
 ### 4. 🩺 Doctor Directory & Interactive Scheduling
-- **Doctor Directory**: Department filtering, specialty search, experience, consultation fees, live availability status badges.
-- **Interactive Calendar View**: 7-day strip picker, grouped time slot availability badges (`Available`, `Booked`, `Past`, `Blocked`).
-- **Doctor Schedule Manager**: Weekly recurring hours configuration, exceptions and leave management with conflict checks.
+- **Doctor Directory**: Department filtering, specialty search, consultation fees, real-time availability badges.
+- **Doctor Schedule Manager**: Weekly recurring working hours, custom exceptions (leave, conferences) with conflict detection.
 
-### 5. 📅 Appointment Booking & Life-Cycle Management
-- **Booking Modal**: Doctor selection, dynamic slot lookup from availability matrix, visit reason, notes.
-- **Status Lifecycle Workflow**: `Pending ➜ Confirmed ➜ CheckedIn ➜ InConsultation ➜ Completed` (or `Cancelled` / `NoShow`).
+### 5. 📅 Clinical Appointments & Calendar View
+- **Clinical Calendar (`/calendar`)**: Full monthly grid with singular navigation (`< Today >`), reactive doctor/status filters, agenda panel, expandable `+N more` appointments modal, and detailed Appointment Dossier.
+- **Table View (`/appointments`)**: Searchable list view with quick status progression buttons (`Check In ➜ Consult ➜ Done ➜ Cancel`).
+- **Booking Modal**: Doctor selection, dynamic slot lookup from availability matrix, reason for visit.
 
-### 6. 🔔 Reactive Notifications & System Alerts
-- **Notification Bell Dropdown**: Signal-driven unread badge, popover dropdown with mark-as-read and target routing.
-- **Full Notification Center**: Filter by category (`Staff`, `Appointments`, `Clinical`, `System`), priority (`Urgent`, `Normal`, `Low`), and archive management.
-
-### 7. ⚙️ System Settings & Customization
-- **Theme Mode**: Instant light, dark, and system theme switching applied reactively to HTML root.
-- **Display Density**: Compact vs Comfortable layout modes.
-- **Regional & Time**: 12-hour / 24-hour clock formats, regional timezones, date formatting patterns.
-
----
-
-## 🛠️ Technology Stack
-
-| Layer | Technology | Description |
-| :--- | :--- | :--- |
-| **Frontend Framework** | **Angular 21** (`@angular/core@^21.2.0`) | Standalone Components, Signal-based reactivity, Modern Control Flow |
-| **Frontend Routing** | **Angular Router** | Functional guards (`authGuard`, `roleGuard`), lazy chunk loading |
-| **Styling & Theme** | **Tailwind CSS v4** | `@tailwindcss/postcss`, responsive layout, dark mode, compact mode |
-| **Icons** | **Lucide Icons** | SVG icon component registry with over 40 medical & UI icons |
-| **HTTP Client** | **Angular HttpClient** | Functional interceptors, `API_BASE_URL` InjectionToken |
-| **Backend Framework** | **ASP.NET Core 10** | Minimal APIs & REST Controllers with OpenAPI |
-| **ORM & Database** | **EF Core 10 + SQL Server** | Code-First migrations, automated MRN generation, relational modeling |
-| **Logging** | **Serilog** | Structured console and file event logging |
-| **Backend Validation** | **FluentValidation** | Request pipeline validation |
+### 6. ⚙️ System Settings & Customization
+- **Theme Mode**: Instant Light, Dark, and System theme switching.
+- **Regional & Time**: 12-hour / 24-hour clock formats, regional timezones, date formatting patterns powered by Luxon.
 
 ---
 
@@ -177,9 +316,9 @@ HospitalManagementSystem_Angular/
 │   │   │   │
 │   │   │   ├── core/                       # Core singleton infrastructure
 │   │   │   │   ├── guards/                 # authGuard, roleGuard
-│   │   │   │   ├── interceptors/           # auth.interceptor (Bearer JWT)
+│   │   │   │   ├── interceptors/           # auth.interceptor (Bearer JWT & logging)
 │   │   │   │   ├── models/                 # TypeScript DTOs & Contracts
-│   │   │   │   ├── services/               # Signal-based API services
+│   │   │   │   ├── services/               # Signal-based API services (cached)
 │   │   │   │   ├── tokens/                 # API_BASE_URL InjectionToken
 │   │   │   │   └── utils/                  # Date, phone, and formatting utilities
 │   │   │   │
@@ -189,7 +328,7 @@ HospitalManagementSystem_Angular/
 │   │   │   │
 │   │   │   ├── features/                   # Standalone feature modules
 │   │   │   │   ├── admin/                  # Admin dashboard, staff approvals, users
-│   │   │   │   ├── appointments/           # Appointment directory & booking modal
+│   │   │   │   ├── appointments/           # Appointment list, calendar view, booking modal
 │   │   │   │   ├── auth/                   # Login, reset password, contact helpdesk
 │   │   │   │   ├── dashboard/              # Role-adaptive analytics & live clock
 │   │   │   │   ├── doctors/                # Doctor directory, calendar, schedules
@@ -197,12 +336,21 @@ HospitalManagementSystem_Angular/
 │   │   │   │   ├── patients/               # Patient directory & registration form
 │   │   │   │   └── settings/               # System preferences & profile settings
 │   │   │   │
-│   │   │   └── shared/                     # Reusable shared components
-│   │   │       ├── icon/                   # Lucide SVG icon registry component
-│   │   │       ├── page-header/            # Header with title, subtitle & action slots
-│   │   │       ├── status-badge/           # Life-cycle & approval status badges
-│   │   │       ├── empty-state/            # Empty table & list visual placeholder
-│   │   │       └── phone-input/            # International phone input with dial codes
+│   │   │   └── shared/                     # Reusable shared components & services
+│   │   │       ├── components/
+│   │   │       │   ├── confirm-dialog/     # Action confirmation dialog
+│   │   │       │   ├── empty-state/        # Empty visual placeholder
+│   │   │       │   ├── icon/               # Lucide SVG icon registry (OnPush)
+│   │   │       │   ├── modal/              # Reusable modal container with slots
+│   │   │       │   ├── page-header/        # Standard page banner header
+│   │   │       │   ├── pagination/         # Accessible table pagination controls
+│   │   │       │   ├── phone-input/        # International phone input
+│   │   │       │   ├── search-input/       # Search input with clear button
+│   │   │       │   ├── segmented-control/  # ARIA tablist pill switcher
+│   │   │       │   ├── stat-card/          # Metric KPI cards (OnPush)
+│   │   │       │   └── status-badge/       # Status badges (OnPush)
+│   │   │       └── services/
+│   │   │           └── confirm-dialog.service.ts # Dynamic dialog service
 │   │   │
 │   │   ├── environments/                   # environment.ts & environment.prod.ts
 │   │   ├── styles.css                      # Tailwind CSS v4 & custom variables
@@ -213,14 +361,13 @@ HospitalManagementSystem_Angular/
 │   ├── package.json                        # Frontend dependencies & scripts
 │   └── tsconfig.json                       # TypeScript compiler options & path aliases
 │
-├── MIGRATION_CHECKLIST.md                  # Comprehensive React ➜ Angular migration tracker
 ├── package.json                            # Root scripts for full-stack workflows
 └── README.md                               # Project documentation
 ```
 
 ---
 
-## 🚦 Getting Started
+## 🚦 Getting Started & Local Setup
 
 ### Prerequisites
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (or .NET 9+)
@@ -262,7 +409,19 @@ npm run dev:full
 
 ---
 
-## 🧪 Available Scripts
+## ⚡ Performance & Coding Standards
+
+To ensure optimal performance and high frame rates across large clinical datasets:
+
+1. **`ChangeDetectionStrategy.OnPush`**: Used on all presentation and shared components. Angular skips change detection unless `@Input()` references change or an event fires.
+2. **`trackBy` in `*ngFor` / `@for`**: Applied to all table rows (`trackByPatientId`, `trackByAppointmentId`, `trackByUserId`) to eliminate DOM recreation during pagination or filtering.
+3. **`takeUntilDestroyed()`**: Subscriptions to `router.events` or `route.queryParams` must pipe `takeUntilDestroyed()` to prevent memory leaks across route transitions.
+4. **`shareReplay` Reference Caching**: Read-only reference endpoints (`getDepartments()`, `getRoles()`) are cached with `shareReplay({ bufferSize: 1, refCount: false })` and invalidated on `logout()` or manual refresh.
+5. **Production Logging Guards**: Console network logs in `auth.interceptor.ts` are guarded by `!environment.production`.
+
+---
+
+## 🧪 Available Scripts & Quality Suite
 
 Run from repository root:
 
@@ -274,10 +433,13 @@ Run from repository root:
 | `npm run build` | Compiles the Angular frontend production bundle into `frontend/dist/` |
 | `npm run build:backend` | Builds the .NET solution |
 | `npm run build:all` | Compiles both frontend and backend |
-| `npm run lint` | Runs Oxlint code analysis on frontend TypeScript |
+| `npm run lint` | Runs Oxlint code analysis on frontend TypeScript (0 warnings target) |
 | `npm run format` | Runs Prettier on frontend and `dotnet format` on backend |
+| `npm run format:check` | Validates Prettier code style without modifying files |
 | `npm run test` | Executes backend xUnit test suite |
 | `npm run clean` | Cleans backend build artifacts |
+
+> **Note**: Pre-commit and pre-push hooks automatically run formatting, linting, and build verification before changes are permitted to commit or push.
 
 ---
 
