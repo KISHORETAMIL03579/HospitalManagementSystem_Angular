@@ -1,5 +1,6 @@
 using HospitalManagement.Application.Appointments.Interfaces;
 using HospitalManagement.Application.Auth.Interfaces;
+using HospitalManagement.Application.Common.Audit;
 using HospitalManagement.Application.Common.Email;
 using HospitalManagement.Application.Common.Security;
 using HospitalManagement.Application.Doctors.Interfaces;
@@ -62,6 +63,7 @@ public static class DependencyInjection
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddSingleton<IEmailTemplateService, EmailTemplateService>();
         services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IAuditService, AuditService>();
 
         return services;
     }

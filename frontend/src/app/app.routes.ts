@@ -105,6 +105,15 @@ export const routes: Routes = [
           ),
       },
       {
+        path: "admin/audit-logs",
+        canActivate: [roleGuard],
+        data: { roles: ADMIN_ROLES },
+        loadComponent: () =>
+          import("./features/admin/pages/audit-logs-page/audit-logs-page.component").then(
+            (m) => m.AuditLogsPageComponent,
+          ),
+      },
+      {
         path: "settings",
         loadComponent: () =>
           import("./features/settings/pages/settings-page/settings-page.component").then(

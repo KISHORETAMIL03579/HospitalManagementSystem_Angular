@@ -91,6 +91,11 @@ const NAV_ITEMS: NavItem[] = [
         path: "/admin/users",
         icon: "user-cog",
       },
+      {
+        label: "Audit Logs",
+        path: "/admin/audit-logs",
+        icon: "shield-check",
+      },
     ],
   },
   {

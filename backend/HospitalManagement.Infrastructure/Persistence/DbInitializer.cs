@@ -128,6 +128,30 @@ public static class DbInitializer
                         CONSTRAINT FK_EmailLogs_StaffReq FOREIGN KEY (StaffRegistrationRequestId) REFERENCES StaffRegistrationRequests(StaffRegistrationRequestId) ON DELETE SET NULL
                     );
                 END
+
+                IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'AuditLogs')
+                BEGIN
+                    CREATE TABLE AuditLogs (
+                        AuditLogId BIGINT IDENTITY(1,1) PRIMARY KEY,
+                        UserId INT NULL,
+                        Username NVARCHAR(150) NULL,
+                        Role NVARCHAR(50) NULL,
+                        Action NVARCHAR(50) NOT NULL,
+                        EntityName NVARCHAR(100) NOT NULL,
+                        EntityId NVARCHAR(100) NULL,
+                        Details NVARCHAR(MAX) NULL,
+                        OldValues NVARCHAR(MAX) NULL,
+                        NewValues NVARCHAR(MAX) NULL,
+                        IpAddress NVARCHAR(50) NULL,
+                        UserAgent NVARCHAR(500) NULL,
+                        CorrelationId NVARCHAR(100) NULL,
+                        TimestampUtc DATETIME2 NOT NULL DEFAULT GETUTCDATE()
+                    );
+                    CREATE INDEX IX_AuditLogs_TimestampUtc ON AuditLogs(TimestampUtc);
+                    CREATE INDEX IX_AuditLogs_UserId ON AuditLogs(UserId);
+                    CREATE INDEX IX_AuditLogs_EntityName ON AuditLogs(EntityName);
+                    CREATE INDEX IX_AuditLogs_CorrelationId ON AuditLogs(CorrelationId);
+                END
             ");
         }
         catch (Exception ex)

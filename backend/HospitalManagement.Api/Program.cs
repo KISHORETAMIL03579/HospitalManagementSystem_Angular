@@ -1,9 +1,13 @@
 using System.Text;
+using System.Text.Json;
+using HospitalManagement.Api.Health;
+using HospitalManagement.Api.Middleware;
 using HospitalManagement.Application;
 using HospitalManagement.Application.Common.Security;
 using HospitalManagement.Infrastructure;
 using HospitalManagement.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -155,7 +159,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Configure Rate Limiting for Auth and Public Endpoints
+// Configure Rate Limiting for Auth, Admin, and General API Endpoints
 builder.Services.AddRateLimiter(options =>
 {
     options.AddFixedWindowLimiter("AuthPolicy", opt =>
@@ -164,9 +168,26 @@ builder.Services.AddRateLimiter(options =>
         opt.Window = TimeSpan.FromMinutes(1);
         opt.QueueLimit = 0;
     });
+
+    options.AddFixedWindowLimiter("ApiPolicy", opt =>
+    {
+        opt.PermitLimit = 120;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
+    });
 });
 
+// Configure Observability Health Checks
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>("database_sqlserver");
+
 var app = builder.Build();
+
+// Phase 9: Security, Observability & Tracing Middleware Pipeline
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseMiddleware<RequestPerformanceMiddleware>();
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.UseSerilogRequestLogging();
 
@@ -195,6 +216,42 @@ app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+var detailedHealthCheckOptions = new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            totalDuration = $"{report.TotalDuration.TotalMilliseconds:F2}ms",
+            entries = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                duration = $"{e.Value.Duration.TotalMilliseconds:F2}ms",
+                data = e.Value.Data
+            })
+        }, new JsonSerializerOptions { WriteIndented = true });
+
+        await context.Response.WriteAsync(result);
+    }
+};
+
+app.MapHealthChecks("/health", detailedHealthCheckOptions);
+app.MapHealthChecks("/api/v1/health", detailedHealthCheckOptions);
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false
+});
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Name == "database_sqlserver"
+});
 
 app.MapControllers();
 app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();

@@ -19,6 +19,7 @@ public class AuthService : IAuthService
     private readonly IValidator<LoginRequest> _loginValidator;
     private readonly IValidator<RegisterUserRequest> _registerValidator;
     private readonly ILogger<AuthService>? _logger;
+    private readonly HospitalManagement.Application.Common.Audit.IAuditService? _auditService;
 
     public AuthService(
         IUserRepository userRepository,
@@ -27,7 +28,8 @@ public class AuthService : IAuthService
         IEmailService emailService,
         IValidator<LoginRequest> loginValidator,
         IValidator<RegisterUserRequest> registerValidator,
-        ILogger<AuthService>? logger = null)
+        ILogger<AuthService>? logger = null,
+        HospitalManagement.Application.Common.Audit.IAuditService? auditService = null)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
@@ -36,6 +38,7 @@ public class AuthService : IAuthService
         _loginValidator = loginValidator;
         _registerValidator = registerValidator;
         _logger = logger;
+        _auditService = auditService;
     }
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
@@ -84,6 +87,19 @@ public class AuthService : IAuthService
         user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
 
         await _userRepository.UpdateAsync(user, cancellationToken);
+
+        if (_auditService is not null)
+        {
+            await _auditService.LogAsync(
+                action: "LOGIN",
+                entityName: "User",
+                entityId: user.UserId.ToString(),
+                details: $"User '{user.Username}' authenticated successfully.",
+                userId: user.UserId,
+                username: user.Username,
+                role: user.Role?.Name,
+                cancellationToken: cancellationToken);
+        }
 
         var token = _jwtTokenGenerator.GenerateToken(user);
 
@@ -185,6 +201,19 @@ public class AuthService : IAuthService
         _logger?.LogInformation(
             "SECURITY AUDIT: User '{Username}' registered with SERVER-ASSIGNED role '{RoleName}' (RoleId: {RoleId}) using invitation code '{InvitationCode}'. Client-submitted role preference was ignored.",
             user.Username, authorizedRole.Name, authorizedRole.RoleId, request.InvitationCode);
+
+        if (_auditService is not null)
+        {
+            await _auditService.LogAsync(
+                action: "REGISTER",
+                entityName: "User",
+                entityId: user.UserId.ToString(),
+                details: $"User '{user.Username}' registered with role '{authorizedRole.Name}'.",
+                userId: user.UserId,
+                username: user.Username,
+                role: authorizedRole.Name,
+                cancellationToken: cancellationToken);
+        }
 
         var token = _jwtTokenGenerator.GenerateToken(user);
 

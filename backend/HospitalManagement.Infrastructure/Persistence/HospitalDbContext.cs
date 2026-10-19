@@ -23,6 +23,7 @@ public class HospitalDbContext : DbContext
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<StaffRegistrationRequest> StaffRegistrationRequests => Set<StaffRegistrationRequest>();
     public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

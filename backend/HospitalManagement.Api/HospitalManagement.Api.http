@@ -24,3 +24,20 @@ Accept: application/json
 
 ###
 
+### Observability: System Health Check
+GET {{HospitalManagement.Api_HostAddress}}/health
+Accept: application/json
+
+###
+
+### Observability: Liveness Probe
+GET {{HospitalManagement.Api_HostAddress}}/health/live
+
+###
+
+### Observability: Readiness Probe (Database Check)
+GET {{HospitalManagement.Api_HostAddress}}/health/ready
+
+###
+
+
