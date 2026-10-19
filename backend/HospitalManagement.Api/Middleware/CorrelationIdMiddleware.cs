@@ -21,12 +21,54 @@ public class CorrelationIdMiddleware
         context.Items["CorrelationId"] = correlationId;
         context.Response.Headers.TryAdd(CorrelationHeader, correlationId);
 
-        var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+        var clientIp = ResolveClientIp(context);
+        context.Items["ClientIp"] = clientIp;
+
+        var userAgent = context.Request.Headers.UserAgent.ToString();
+        if (!string.IsNullOrWhiteSpace(userAgent))
+        {
+            if (userAgent.Length > 500) userAgent = userAgent[..500];
+            context.Items["UserAgent"] = userAgent;
+        }
 
         using (LogContext.PushProperty("CorrelationId", correlationId))
         using (LogContext.PushProperty("ClientIp", clientIp))
+        using (LogContext.PushProperty("UserAgent", userAgent ?? "Unknown"))
         {
             await _next(context);
         }
+    }
+
+    private static string ResolveClientIp(HttpContext context)
+    {
+        if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor) && !string.IsNullOrWhiteSpace(forwardedFor))
+        {
+            var ip = forwardedFor.ToString().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(ip))
+            {
+                return ip;
+            }
+        }
+
+        if (context.Request.Headers.TryGetValue("X-Real-IP", out var realIp) && !string.IsNullOrWhiteSpace(realIp))
+        {
+            return realIp.ToString().Trim();
+        }
+
+        var remoteIp = context.Connection.RemoteIpAddress;
+        if (remoteIp is not null)
+        {
+            if (remoteIp.IsIPv4MappedToIPv6)
+            {
+                return remoteIp.MapToIPv4().ToString();
+            }
+            if (System.Net.IPAddress.IsLoopback(remoteIp))
+            {
+                return "127.0.0.1";
+            }
+            return remoteIp.ToString();
+        }
+
+        return "127.0.0.1";
     }
 }

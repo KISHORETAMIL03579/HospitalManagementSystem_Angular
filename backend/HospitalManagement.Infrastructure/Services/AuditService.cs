@@ -1,6 +1,8 @@
+using System.Security.Claims;
 using HospitalManagement.Application.Common.Audit;
 using HospitalManagement.Domain.Entities;
 using HospitalManagement.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -10,11 +12,16 @@ public class AuditService : IAuditService
 {
     private readonly HospitalDbContext _dbContext;
     private readonly ILogger<AuditService> _logger;
+    private readonly IHttpContextAccessor? _httpContextAccessor;
 
-    public AuditService(HospitalDbContext dbContext, ILogger<AuditService> logger)
+    public AuditService(
+        HospitalDbContext dbContext,
+        ILogger<AuditService> logger,
+        IHttpContextAccessor? httpContextAccessor = null)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task LogAsync(
@@ -32,6 +39,42 @@ public class AuditService : IAuditService
         string? correlationId = null,
         CancellationToken cancellationToken = default)
     {
+        var httpContext = _httpContextAccessor?.HttpContext;
+        var items = httpContext?.Items;
+
+        // Retrieve pre-extracted properties from CorrelationIdMiddleware or fallback to request
+        correlationId ??= items?["CorrelationId"]?.ToString()
+            ?? httpContext?.Request.Headers["X-Correlation-ID"].FirstOrDefault()
+            ?? httpContext?.TraceIdentifier;
+
+        ipAddress ??= items?["ClientIp"]?.ToString()
+            ?? httpContext?.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+            ?? httpContext?.Connection.RemoteIpAddress?.ToString()
+            ?? "127.0.0.1";
+
+        userAgent ??= items?["UserAgent"]?.ToString()
+            ?? httpContext?.Request.Headers.UserAgent.ToString();
+        if (string.IsNullOrWhiteSpace(userAgent))
+        {
+            userAgent = null;
+        }
+
+        if (!userId.HasValue && httpContext?.User?.Identity?.IsAuthenticated == true)
+        {
+            var idClaim = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? httpContext.User.FindFirst("sub")?.Value
+                ?? httpContext.User.FindFirst("userId")?.Value;
+            if (int.TryParse(idClaim, out var parsedId))
+            {
+                userId = parsedId;
+            }
+        }
+
+        username ??= httpContext?.User?.Identity?.Name
+            ?? httpContext?.User?.FindFirst(ClaimTypes.Name)?.Value;
+
+        role ??= httpContext?.User?.FindFirst(ClaimTypes.Role)?.Value;
+
         var auditLog = new AuditLog
         {
             Action = action.ToUpperInvariant(),
@@ -54,6 +97,37 @@ public class AuditService : IAuditService
 
     public async Task LogAsync(AuditLog auditLog, CancellationToken cancellationToken = default)
     {
+        var httpContext = _httpContextAccessor?.HttpContext;
+        var items = httpContext?.Items;
+
+        auditLog.CorrelationId ??= items?["CorrelationId"]?.ToString()
+            ?? httpContext?.Request.Headers["X-Correlation-ID"].FirstOrDefault()
+            ?? httpContext?.TraceIdentifier;
+
+        auditLog.IpAddress ??= items?["ClientIp"]?.ToString()
+            ?? httpContext?.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+            ?? httpContext?.Connection.RemoteIpAddress?.ToString()
+            ?? "127.0.0.1";
+
+        if (string.IsNullOrWhiteSpace(auditLog.UserAgent))
+        {
+            auditLog.UserAgent = items?["UserAgent"]?.ToString()
+                ?? httpContext?.Request.Headers.UserAgent.ToString();
+            if (string.IsNullOrWhiteSpace(auditLog.UserAgent))
+            {
+                auditLog.UserAgent = null;
+            }
+        }
+
+        if (auditLog.CorrelationId is not null && auditLog.CorrelationId.Length > 100)
+            auditLog.CorrelationId = auditLog.CorrelationId[..100];
+
+        if (auditLog.IpAddress is not null && auditLog.IpAddress.Length > 50)
+            auditLog.IpAddress = auditLog.IpAddress[..50];
+
+        if (auditLog.UserAgent is not null && auditLog.UserAgent.Length > 500)
+            auditLog.UserAgent = auditLog.UserAgent[..500];
+
         try
         {
             _dbContext.AuditLogs.Add(auditLog);

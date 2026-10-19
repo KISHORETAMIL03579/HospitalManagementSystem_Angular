@@ -63,6 +63,7 @@ public static class DependencyInjection
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
         services.AddSingleton<IEmailTemplateService, EmailTemplateService>();
         services.AddScoped<IEmailService, EmailService>();
+        services.AddHttpContextAccessor();
         services.AddScoped<IAuditService, AuditService>();
 
         return services;
