@@ -12,15 +12,16 @@ HospitalManagementSystem/
 │   ├── HospitalManagement.Tests/         # xUnit Test Suite
 │   └── HospitalManagement.slnx           # .NET Solution File
 │
-└── frontend/                             # React 19 + TypeScript + Vite Application
-    ├── src/                              # Feature-sliced frontend modules
+└── frontend/                             # Angular 21 Standalone + TypeScript Application
+    ├── src/                              # Clean Architecture Angular application
     ├── package.json
-    └── vite.config.ts
+    ├── angular.json
+    └── tsconfig.json
 ```
 
 ---
 
-## 🎨 FRONTEND GUIDE (React 19 + TypeScript + Vite)
+## 🎨 FRONTEND GUIDE (Angular 21 + TypeScript)
 
 ### Location
 Path: `d:\Projects\HospitalManagementSystem\frontend`

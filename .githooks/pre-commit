@@ -12,7 +12,7 @@ BACKEND_CHANGED=$(echo "$STAGED_FILES" | grep -E '^(backend/|.*\.slnx?|.*\.cs$)'
 
 # 1. Format Frontend if frontend files were modified
 if [ -n "$FRONTEND_CHANGED" ]; then
-    echo "\n[Frontend] Auto-formatting changed React/TypeScript files (Prettier)..."
+    echo "\n[Frontend] Auto-formatting changed Angular/TypeScript files (Prettier)..."
     if [ -d "frontend" ]; then
         cd frontend
         npm run format

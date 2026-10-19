@@ -41,7 +41,7 @@ public class DoctorAvailabilityServiceTests
     public async Task GetDoctorAvailabilityAsync_WithMultipleSessions_GeneratesAllSlots()
     {
         // Arrange: Monday with morning (09:00 - 11:00) and afternoon (14:00 - 16:00) sessions
-        var date = new DateOnly(2026, 10, 19); // Monday
+        var date = new DateOnly(2028, 10, 16); // Future Monday
         var schedules = new List<DoctorSchedule>
         {
             new()
@@ -90,7 +90,7 @@ public class DoctorAvailabilityServiceTests
     public async Task GetDoctorAvailabilityAsync_WithFullDayLeave_MarksAllSlotsBlockedAndStatusOnLeave()
     {
         // Arrange
-        var date = new DateOnly(2026, 10, 19); // Monday
+        var date = new DateOnly(2028, 10, 16); // Future Monday
         var schedules = new List<DoctorSchedule>
         {
             new()
@@ -137,7 +137,7 @@ public class DoctorAvailabilityServiceTests
     public async Task GetDoctorAvailabilityAsync_WithPartialUnavailableBlock_BlocksOnlyOverlappingSlots()
     {
         // Arrange: 09:00 - 12:00 with block 10:00 - 11:00
-        var date = new DateOnly(2026, 10, 19);
+        var date = new DateOnly(2028, 10, 16);
         var schedules = new List<DoctorSchedule>
         {
             new()
@@ -196,7 +196,7 @@ public class DoctorAvailabilityServiceTests
     public async Task GetDoctorAvailabilityAsync_WithActiveAppointment_MarksSlotBooked()
     {
         // Arrange: 09:00 - 11:00 schedule with an appointment at 09:30
-        var date = new DateOnly(2026, 10, 19);
+        var date = new DateOnly(2028, 10, 16);
         var schedules = new List<DoctorSchedule>
         {
             new()

@@ -4,9 +4,9 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                       React + TypeScript (Vite)                             │
+│                 Angular 21 Standalone + TypeScript                          │
 │                                                                             │
-│   React Router  │  TanStack Query  │  React Hook Form + Zod  │  Tailwind CSS    │
+│   Angular Router │ Angular Signals │ Typed Reactive Forms │ Tailwind CSS v4 │
 └──────────────────────────────────────┬──────────────────────────────────────┘
                                        │ HTTPS / JSON (/api/v1)
                                        ▼
@@ -48,31 +48,19 @@
 frontend/
 ├── src/
 │   ├── app/
-│   │   ├── router.tsx             # React Router route definitions & guards
-│   │   ├── providers.tsx          # QueryClientProvider, AuthProvider, ToastProvider
-│   │   └── queryClient.ts         # TanStack Query client configuration
-│   │
-│   ├── components/                # Shared global UI components
-│   │   ├── ui/                    # Base atomic UI primitives (Button, Input, Table, Modal)
-│   │   ├── layout/                # App Shell, Header, Sidebar, UserMenu
-│   │   └── common/                # ErrorBoundary, PageHeader, LoadingSkeleton
-│   │
-│   ├── features/                  # Feature-sliced domain modules
-│   │   ├── auth/                  # Login, JWT, Refresh Tokens, Role Guards
-│   │   ├── patients/              # Patient registration, directory table, search, hooks
-│   │   ├── doctors/               # Doctor directory & schedules
-│   │   ├── appointments/          # Calendar grid & booking modal
-│   │   ├── encounters/            # EHR & clinical notes
-│   │   ├── prescriptions/         # Rx generator & print templates
-│   │   ├── laboratory/            # Lab test requests & results viewer
-│   │   └── billing/               # Invoices & payment collection
-│   │
-│   ├── lib/
-│   │   ├── axios.ts               # Configured Axios instance with auth interceptors
-│   │   ├── utils.ts               # Tailwind cn utility, formatters
-│   │   └── constants.ts           # API URLs, app configurations
-│   │
-│   └── main.tsx
+│   │   ├── core/                  # Singleton services, interceptors, auth guards
+│   │   ├── shared/                # Reusable UI components, pipes, directives
+│   │   ├── layout/                # App shell, sidebar, topbar
+│   │   ├── features/              # Feature modules (Domain, Application, Presentation)
+│   │   │   ├── auth/              # Login, token storage, auth guards
+│   │   │   ├── patients/          # Patient registration, directory table, search
+│   │   │   ├── doctors/           # Doctor directory & schedules
+│   │   │   ├── appointments/      # Calendar grid & booking modal
+│   │   │   └── dashboard/         # Hospital statistics & quick actions
+│   │   ├── app.routes.ts          # Lazy-loaded route definitions
+│   │   └── app.config.ts          # Application providers (HttpClient, Interceptors)
+│   ├── environments/
+│   └── main.ts
 ```
 
 ### Backend (`HospitalManagement.slnx`)
@@ -111,13 +99,13 @@ HospitalManagement.sln
                 RECEPTIONIST
                      │
                      ↓
-         React Form (PatientForm.tsx)
+          Angular Form (patient-create-page.component.ts)
                      │
                      ↓
-          Zod Client Validation
+         Typed Reactive Form Validation
                      │
                      ↓
-        POST /api/v1/patients (Axios)
+        POST /api/v1/patients (HttpClient)
                      │
                      ↓
             ASP.NET Core API
@@ -151,10 +139,10 @@ HospitalManagement.sln
         Return 201 Created (DTO)
                      │
                      ↓
-        TanStack Query Cache Invalidation
+        Signals / Observable Invalidation
                      │
                      ↓
-     React UI Updates Patient List Table
+     Angular UI Updates Patient List Table
 ```
 
 ---
@@ -162,7 +150,7 @@ HospitalManagement.sln
 ## 4. 12-Phase Master Roadmap
 
 ```
-PHASE 1  ──> Foundation (Clean Architecture + React Vite) [COMPLETED]
+PHASE 1  ──> Foundation (Clean Architecture + Angular 21 Standalone) [COMPLETED]
 PHASE 2  ──> Authentication & Authorization (JWT + Role Guards)
 PHASE 3  ──> Patient Vertical Slice [COMPLETED]
 PHASE 4  ──> Doctor & Department Management
