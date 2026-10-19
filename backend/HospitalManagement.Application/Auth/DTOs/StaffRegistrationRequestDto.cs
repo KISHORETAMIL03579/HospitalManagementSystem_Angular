@@ -22,7 +22,7 @@ public class StaffRegistrationRequestDto
     public string? RejectionReason { get; set; }
 
     // Email Delivery Tracking Fields
-    public EmailDeliveryStatus EmailStatus { get; set; } = EmailDeliveryStatus.Sent;
+    public EmailDeliveryStatus? EmailStatus { get; set; }
     public DateTime? LastEmailAttempt { get; set; }
     public string? EmailErrorMessage { get; set; }
     public int? EmailLogId { get; set; }

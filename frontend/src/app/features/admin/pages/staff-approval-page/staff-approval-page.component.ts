@@ -154,11 +154,11 @@ import { IconComponent } from "@shared/components/icon/icon.component";
               class="bg-slate-100/80 dark:bg-slate-800/80 text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700"
             >
               <tr>
-                <th class="w-[28%] py-3 pl-4 pr-3">Applicant Info</th>
-                <th class="w-[22%] py-3 px-3">Requested Role</th>
-                <th class="w-[18%] py-3 px-3">Submitted At</th>
-                <th class="w-[14%] py-3 px-3">Status</th>
-                <th class="w-[18%] py-3 pr-4 pl-3 text-right">Actions</th>
+                <th class="w-[26%] py-3 pl-4 pr-3">Applicant Info</th>
+                <th class="w-[18%] py-3 px-3">Requested Role</th>
+                <th class="w-[16%] py-3 px-3">Submitted At</th>
+                <th class="w-[18%] py-3 px-3">Status</th>
+                <th class="w-[22%] py-3 pr-4 pl-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -198,6 +198,13 @@ import { IconComponent } from "@shared/components/icon/icon.component";
                   >
                     ID: {{ req.employeeId }}
                   </div>
+                  <div
+                    *ngIf="req.rejectionReason"
+                    class="text-[11px] text-rose-500 dark:text-rose-400 italic truncate max-w-[200px] mt-0.5"
+                    [title]="'Rejection Reason: ' + req.rejectionReason"
+                  >
+                    Reason: {{ req.rejectionReason }}
+                  </div>
                 </td>
                 <td class="py-3.5 px-3">
                   <span
@@ -210,16 +217,36 @@ import { IconComponent } from "@shared/components/icon/icon.component";
                 <td
                   class="py-3.5 px-3 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap"
                 >
-                  {{ formatDate(req.submittedAt) }}
+                  <div>{{ formatDate(req.submittedAt) }}</div>
+                  <div
+                    *ngIf="req.reviewedAt"
+                    class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5"
+                  >
+                    Reviewed: {{ formatDate(req.reviewedAt) }}
+                  </div>
                 </td>
-                <td class="py-3.5 px-3 whitespace-nowrap">
-                  <app-status-badge
-                    type="staffApproval"
-                    [status]="req.status"
-                    size="sm"
-                  ></app-status-badge>
+                <td class="py-3.5 px-3">
+                  <div class="flex flex-col gap-1 items-start">
+                    <app-status-badge
+                      type="staffApproval"
+                      [status]="req.status"
+                      size="sm"
+                    ></app-status-badge>
+                    <div
+                      *ngIf="showEmailBadge(req)"
+                      class="flex items-center gap-1"
+                    >
+                      <app-status-badge
+                        type="email"
+                        [status]="req.emailStatus!"
+                        [title]="getEmailTooltip(req)"
+                        size="sm"
+                      ></app-status-badge>
+                    </div>
+                  </div>
                 </td>
                 <td class="py-3.5 pr-4 pl-3 text-right whitespace-nowrap">
+                  <!-- Pending actions -->
                   <div
                     *ngIf="isPending(req.status)"
                     class="flex items-center justify-end gap-1.5"
@@ -227,23 +254,90 @@ import { IconComponent } from "@shared/components/icon/icon.component";
                     <button
                       type="button"
                       (click)="openApproveModal(req)"
-                      class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-2xs transition cursor-pointer"
+                      class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-2xs transition cursor-pointer flex items-center gap-1"
                     >
-                      Approve
+                      <app-icon name="check" [size]="12"></app-icon>
+                      <span>Approve</span>
                     </button>
                     <button
                       type="button"
                       (click)="openRejectModal(req)"
-                      class="px-2.5 py-1 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-semibold transition cursor-pointer"
+                      class="px-2.5 py-1 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-400 dark:hover:bg-rose-900/50 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1"
                     >
-                      Reject
+                      <app-icon name="x" [size]="12"></app-icon>
+                      <span>Reject</span>
                     </button>
                   </div>
+
+                  <!-- Rejected actions: Re-Approve + Resend Email -->
                   <div
-                    *ngIf="!isPending(req.status)"
-                    class="text-xs text-slate-400"
+                    *ngIf="isRejected(req.status)"
+                    class="flex items-center justify-end gap-1.5"
                   >
-                    Reviewed {{ formatDate(req.reviewedAt) }}
+                    <button
+                      type="button"
+                      (click)="openApproveModal(req)"
+                      class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-2xs transition cursor-pointer flex items-center gap-1"
+                      title="Re-approve this previously rejected application"
+                    >
+                      <app-icon name="refresh-cw" [size]="12"></app-icon>
+                      <span>Re-Approve</span>
+                    </button>
+                    <button
+                      type="button"
+                      (click)="resendEmail(req)"
+                      [disabled]="
+                        retryingEmailId() === (req.requestId || req.id)
+                      "
+                      class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                      title="Resend rejection notification email"
+                    >
+                      <app-icon
+                        name="mail"
+                        [size]="12"
+                        [className]="
+                          retryingEmailId() === (req.requestId || req.id)
+                            ? 'animate-spin'
+                            : ''
+                        "
+                      ></app-icon>
+                      <span>{{
+                        retryingEmailId() === (req.requestId || req.id)
+                          ? "Sending..."
+                          : "Resend Email"
+                      }}</span>
+                    </button>
+                  </div>
+
+                  <!-- Approved actions: Resend Email -->
+                  <div
+                    *ngIf="isApproved(req.status)"
+                    class="flex items-center justify-end gap-1.5"
+                  >
+                    <button
+                      type="button"
+                      (click)="resendEmail(req)"
+                      [disabled]="
+                        retryingEmailId() === (req.requestId || req.id)
+                      "
+                      class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                      title="Resend welcome/credentials email"
+                    >
+                      <app-icon
+                        name="mail"
+                        [size]="12"
+                        [className]="
+                          retryingEmailId() === (req.requestId || req.id)
+                            ? 'animate-spin'
+                            : ''
+                        "
+                      ></app-icon>
+                      <span>{{
+                        retryingEmailId() === (req.requestId || req.id)
+                          ? "Sending..."
+                          : "Resend Email"
+                      }}</span>
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -264,7 +358,11 @@ import { IconComponent } from "@shared/components/icon/icon.component";
             class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3"
           >
             <h3 class="font-bold text-slate-900 dark:text-white text-base">
-              Approve Staff Account
+              {{
+                isRejected(selectedRequestForApprove()?.status)
+                  ? "Re-Approve Staff Account"
+                  : "Approve Staff Account"
+              }}
             </h3>
             <button
               type="button"
@@ -315,7 +413,11 @@ import { IconComponent } from "@shared/components/icon/icon.component";
               (click)="confirmApproval()"
               class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm cursor-pointer"
             >
-              Confirm Approval
+              {{
+                isRejected(selectedRequestForApprove()?.status)
+                  ? "Confirm Re-Approval"
+                  : "Confirm Approval"
+              }}
             </button>
           </div>
         </div>
@@ -397,6 +499,7 @@ export class StaffApprovalPageComponent implements OnInit {
   readonly requests = signal<StaffRegistrationRequest[]>([]);
   readonly roles = signal<RoleDto[]>([]);
   readonly loading = signal(false);
+  readonly retryingEmailId = signal<number | null>(null);
   readonly activeTab = signal<"pending" | "approved" | "rejected" | "all">(
     "pending",
   );
@@ -484,12 +587,15 @@ export class StaffApprovalPageComponent implements OnInit {
     if (!req) return;
 
     const id = req.requestId || req.id;
+    const wasRejected = this.isRejected(req.status);
     this.authService.approveStaffRequest(id, this.selectedRoleId).subscribe({
       next: () => {
         this.selectedRequestForApprove.set(null);
         this.feedback.set({
           type: "success",
-          message: `Application for ${req.fullName} approved successfully!`,
+          message: wasRejected
+            ? `Application for ${req.fullName} re-approved successfully!`
+            : `Application for ${req.fullName} approved successfully!`,
         });
         this.fetchRequests();
       },
@@ -523,5 +629,57 @@ export class StaffApprovalPageComponent implements OnInit {
         });
       },
     });
+  }
+
+  resendEmail(req: StaffRegistrationRequest): void {
+    const id = req.requestId || req.id;
+    if (!id) return;
+
+    this.retryingEmailId.set(id);
+    this.authService.retryStaffEmail(id).subscribe({
+      next: () => {
+        this.retryingEmailId.set(null);
+        this.feedback.set({
+          type: "success",
+          message: `Notification email dispatched to ${req.email}!`,
+        });
+        this.fetchRequests();
+      },
+      error: (err) => {
+        this.retryingEmailId.set(null);
+        this.feedback.set({
+          type: "error",
+          message: err?.error?.message || "Failed to resend email.",
+        });
+      },
+    });
+  }
+
+  showEmailBadge(req: StaffRegistrationRequest): boolean {
+    if (req.emailStatus === undefined || req.emailStatus === null) {
+      return false;
+    }
+    // For pending requests: only show if the registration email delivery explicitly failed
+    if (this.isPending(req.status)) {
+      return this.isEmailFailed(req.emailStatus);
+    }
+    // For reviewed requests (Approved / Rejected): display the email delivery status
+    return true;
+  }
+
+  isEmailFailed(status: string | number | undefined | null): boolean {
+    if (status === undefined || status === null) return false;
+    const s = String(status).toLowerCase();
+    return status === 3 || s === "failed" || s === "bounced";
+  }
+
+  getEmailTooltip(req: StaffRegistrationRequest): string {
+    if (req.emailErrorMessage) {
+      return `Delivery failed: ${req.emailErrorMessage}`;
+    }
+    if (req.lastEmailAttempt) {
+      return `Email dispatched: ${this.formatDate(req.lastEmailAttempt)}`;
+    }
+    return "Notification email dispatched";
   }
 }

@@ -111,7 +111,7 @@ export type BadgeVariant =
 })
 export class StatusBadgeComponent {
   @Input() type: BadgeVariant = "custom";
-  @Input() status?: AppointmentStatus | string | number | boolean;
+  @Input() status?: AppointmentStatus | string | number | boolean | null;
   @Input() label?: string;
   @Input() variantColor?:
     "success" | "warning" | "danger" | "info" | "neutral" | "purple";

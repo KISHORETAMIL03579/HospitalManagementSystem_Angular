@@ -416,7 +416,7 @@ public class StaffRegistrationService : IStaffRegistrationService
             ReviewedAt = s.ReviewedAt,
             ReviewedByName = s.ReviewedByUser?.FullName,
             RejectionReason = s.RejectionReason,
-            EmailStatus = EmailDeliveryStatus.Sent
+            EmailStatus = null
         };
 
         var emailLog = await _userRepository.GetLatestEmailLogForStaffRequestAsync(s.StaffRegistrationRequestId, cancellationToken);

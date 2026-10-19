@@ -146,7 +146,7 @@ export interface StaffRegistrationRequest {
   reviewedAt?: string;
   reviewedByName?: string;
   rejectionReason?: string;
-  emailStatus: 0 | 1 | 2 | 3 | 4 | 5 | string;
+  emailStatus?: 0 | 1 | 2 | 3 | 4 | 5 | string | null;
   lastEmailAttempt?: string;
   emailErrorMessage?: string;
   emailLogId?: number;
